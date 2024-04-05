@@ -74,6 +74,12 @@ func addTypeProvider(typ reflect.Type, constructor any, kind providerKind, lifet
 
 func addProvider[TType any](constructor any, kind providerKind, lifetime Lifetime) {
 	typ := reflect.TypeOf((*TType)(nil)).Elem()
+	returnType := reflect.TypeOf(constructor).Out(0)
+
+	if !typ.Out(0).Implements(typ) {
+		panic(fmt.Sprintf("constructor return type %v does not implement %v", returnType, typ))
+	}
+
 	addTypeProvider(typ, constructor, kind, lifetime)
 }
 
