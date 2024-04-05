@@ -46,8 +46,8 @@ func (s *Service) GetID() string {
 }
 
 func TestSingleton(t *testing.T) {
-	AddService[IRepo](NewRepo, ScopeSingleton)
-	AddService[IService](NewService, ScopeSingleton)
+	AddService[IRepo](NewRepo, LifetimeSingleton)
+	AddService[IService](NewService, LifetimeSingleton)
 
 	id1 := GetService[IService]().GetID()
 	id2 := GetService[IService]().GetID()
@@ -58,8 +58,8 @@ func TestSingleton(t *testing.T) {
 }
 
 func TestTransient(t *testing.T) {
-	AddService[IRepo](NewRepo, ScopeTransient)
-	AddService[IService](NewService, ScopeTransient)
+	AddService[IRepo](NewRepo, LifetimeTransient)
+	AddService[IService](NewService, LifetimeTransient)
 	id1 := GetService[IService]().GetID()
 	id2 := GetService[IService]().GetID()
 
