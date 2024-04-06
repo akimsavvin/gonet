@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func newConfig[T any]() *T {
+func newConfig[T any]() T {
 	fileName := "config.yaml"
 
 	if env, ok := GetCurrentEnv(); ok {
@@ -23,9 +23,10 @@ func newConfig[T any]() *T {
 		panic(fmt.Sprintf("could not read config file %s, due to error: %s", fileName, err.Error()))
 	}
 
-	return cfg
+	return *cfg
 }
 
 func AddConfig[T any]() {
-	addProvider[*T](newConfig[T], configPr, Singleton)
+	cfg := newConfig[T]()
+	AddValue[T](cfg)
 }
