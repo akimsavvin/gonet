@@ -4,17 +4,25 @@ import (
 	"fmt"
 )
 
-func AddService[TService any](constructor any, lifetime Lifetime) {
+func AddSingleton[TService any](constructor any) {
+	addService[TService](singleton, constructor)
+}
+
+func AddTransient[TService any](constructor any) {
+	addService[TService](transient, constructor)
+}
+
+func addService[TService any](lifetime Lifetime, constructor any) {
 	validateConstructor(constructor)
-	addProvider[TService](constructor, servicePr, lifetime)
+	addProvider[TService](lifetime, constructor, servicePr)
 }
 
 func GetService[TService any]() TService {
 	p := getProvider[TService]()
 	instance, ok := p.getInstance().Interface().(TService)
 
-	if p.kind != servicePr || !ok {
-		panic(fmt.Sprintf("no service found for type: %v", p.typ))
+	if p.typ != servicePr || !ok {
+		panic(fmt.Sprintf("no service found for type: %v", p.valTyp))
 	}
 
 	return instance

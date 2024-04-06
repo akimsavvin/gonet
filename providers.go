@@ -8,24 +8,24 @@ import (
 type Lifetime int
 
 const (
-	Singleton          Lifetime = iota + 1
+	singleton          Lifetime = iota + 1
 	Request_DO_NOT_USE          = iota + 1
-	Transient                   = iota + 1
+	transient                   = iota + 1
 )
 
-type providerKind int
+type providerType int
 
 const (
-	servicePr    providerKind = iota + 1
+	servicePr    providerType = iota + 1
 	controllerPr              = iota + 1
 	valuePr                   = iota + 1
 	configPr                  = iota + 1
 )
 
 type provider struct {
-	kind providerKind
-	// typ: all providers have
-	typ reflect.Type
+	typ providerType
+	// valTyp: all providers have
+	valTyp reflect.Type
 	// value: singleton providers have
 	value       *reflect.Value
 	constructor reflect.Value
@@ -33,7 +33,7 @@ type provider struct {
 }
 
 func (p *provider) getInstance() reflect.Value {
-	if p.lifetime == Singleton && p.value != nil {
+	if p.lifetime == singleton && p.value != nil {
 		return *p.value
 	}
 
@@ -42,8 +42,8 @@ func (p *provider) getInstance() reflect.Value {
 
 	for i := 0; i < depsCount; i++ {
 		depP := getTypeProvider(p.constructor.Type().In(i))
-		if depP.kind == controllerPr {
-			panic(fmt.Sprintf("no provider found for type %s", depP.typ))
+		if depP.typ == controllerPr {
+			panic(fmt.Sprintf("no provider found for type %s", depP.valTyp))
 		}
 
 		deps[i] = depP.getInstance()
@@ -51,7 +51,7 @@ func (p *provider) getInstance() reflect.Value {
 
 	instance := p.constructor.Call(deps)[0]
 
-	if p.lifetime == Singleton {
+	if p.lifetime == singleton {
 		p.value = &instance
 	}
 
@@ -60,29 +60,28 @@ func (p *provider) getInstance() reflect.Value {
 
 var providers = make(map[reflect.Type]*provider)
 
-func addTypeProvider(typ reflect.Type, constructor any, kind providerKind, lifetime Lifetime) {
+func addTypeProvider(valTyp reflect.Type, lifetime Lifetime, typ providerType, constructor any) {
 	pvdr := &provider{
-		kind:        kind,
 		typ:         typ,
+		valTyp:      valTyp,
 		value:       nil,
 		constructor: reflect.ValueOf(constructor),
 		lifetime:    lifetime,
 	}
 
-	providers[typ] = pvdr
+	providers[valTyp] = pvdr
 }
 
-func addProvider[TType any](constructor any, kind providerKind, lifetime Lifetime) {
-	typ := reflect.TypeOf((*TType)(nil)).Elem().Elem()
-	retTyp := reflect.TypeOf(constructor).Out(0).Elem()
-	fmt.Printf("Return type %v implements type %v: \n", retTyp, typ)
-	fmt.Println(retTyp.Implements(typ))
+func addProvider[TType any](lifetime Lifetime, constructor any, typ providerType) {
+	valTyp := reflect.TypeOf((*TType)(nil)).Elem()
+	constrTyp := reflect.TypeOf(constructor)
+	retTyp := constrTyp.Out(0)
 
-	//if !typ.Out(0).Implements(typ) {
-	//	panic(fmt.Sprintf("constructor return type %v does not implement %v", retTyp, typ))
-	//}
+	if !retTyp.AssignableTo(valTyp) {
+		panic(fmt.Sprintf("constructor %v return type %v is not assignable to %v", constrTyp.Name(), retTyp, valTyp))
+	}
 
-	addTypeProvider(typ, constructor, kind, lifetime)
+	addTypeProvider(valTyp, lifetime, typ, constructor)
 }
 
 func getTypeProvider(typ reflect.Type) *provider {
