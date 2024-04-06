@@ -17,7 +17,7 @@ func AddController(constructor any) {
 		panic(fmt.Sprintf("controller %s does not implement Constructor interface", typ.Name()))
 	}
 
-	addTypeProvider(typ, constructor, controllerPr, LifetimeSingleton)
+	addTypeProvider(typ, constructor, controllerPr, Singleton)
 }
 
 func getControllers() []Controller {

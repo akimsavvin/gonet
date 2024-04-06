@@ -8,9 +8,9 @@ import (
 type Lifetime int
 
 const (
-	LifetimeSingleton          Lifetime = iota + 1
-	LifetimeRequest_DO_NOT_USE          = iota + 1
-	LifetimeTransient                   = iota + 1
+	Singleton          Lifetime = iota + 1
+	Request_DO_NOT_USE          = iota + 1
+	Transient                   = iota + 1
 )
 
 type providerKind int
@@ -33,7 +33,7 @@ type provider struct {
 }
 
 func (p *provider) getInstance() reflect.Value {
-	if p.lifetime == LifetimeSingleton && p.value != nil {
+	if p.lifetime == Singleton && p.value != nil {
 		return *p.value
 	}
 
@@ -51,7 +51,7 @@ func (p *provider) getInstance() reflect.Value {
 
 	instance := p.constructor.Call(deps)[0]
 
-	if p.lifetime == LifetimeSingleton {
+	if p.lifetime == Singleton {
 		p.value = &instance
 	}
 
@@ -73,12 +73,14 @@ func addTypeProvider(typ reflect.Type, constructor any, kind providerKind, lifet
 }
 
 func addProvider[TType any](constructor any, kind providerKind, lifetime Lifetime) {
-	typ := reflect.TypeOf((*TType)(nil)).Elem()
-	returnType := reflect.TypeOf(constructor).Out(0)
+	typ := reflect.TypeOf((*TType)(nil)).Elem().Elem()
+	retTyp := reflect.TypeOf(constructor).Out(0).Elem()
+	fmt.Printf("Return type %v implements type %v: \n", retTyp, typ)
+	fmt.Println(retTyp.Implements(typ))
 
-	if !typ.Out(0).Implements(typ) {
-		panic(fmt.Sprintf("constructor return type %v does not implement %v", returnType, typ))
-	}
+	//if !typ.Out(0).Implements(typ) {
+	//	panic(fmt.Sprintf("constructor return type %v does not implement %v", retTyp, typ))
+	//}
 
 	addTypeProvider(typ, constructor, kind, lifetime)
 }

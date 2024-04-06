@@ -27,5 +27,5 @@ func newConfig[T any]() *T {
 }
 
 func AddConfig[T any]() {
-	addProvider[*T](newConfig[T], configPr, LifetimeSingleton)
+	addProvider[*T](newConfig[T], configPr, Singleton)
 }
