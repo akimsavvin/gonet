@@ -5,7 +5,7 @@ import (
 )
 
 func AddService[TService any](constructor any, lifetime Lifetime) {
-	validateConstructor[TService](constructor)
+	validateConstructor(constructor)
 	addProvider[TService](constructor, servicePr, lifetime)
 }
 
