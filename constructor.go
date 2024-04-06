@@ -15,4 +15,10 @@ func validateConstructor(constructor any) {
 	if typ.NumOut() != 1 {
 		panic(fmt.Sprintf("%v constructor must have only one return argument", constructor))
 	}
+
+	const prefix = "New"
+	name := typ.Name()
+	if len(name) != 0 && name[:3] != prefix {
+		panic(fmt.Sprintf("constructor's %v name does not start with '%s' prefix", name, prefix))
+	}
 }
