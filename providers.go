@@ -1,3 +1,7 @@
+// 🔥 GoNet is the first full-fledged framework made for Golang!
+// ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
+// 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
+
 package gonet
 
 import (
@@ -8,9 +12,9 @@ import (
 type Lifetime int
 
 const (
-	singleton          Lifetime = iota + 1
-	Request_DO_NOT_USE          = iota + 1
-	transient                   = iota + 1
+	singleton Lifetime = iota + 1
+	scoped             = iota + 1
+	transient          = iota + 1
 )
 
 type providerType int
@@ -21,6 +25,34 @@ const (
 	valuePr                   = iota + 1
 	configPr                  = iota + 1
 )
+
+func resolveValueDeps(val reflect.Value) []reflect.Value {
+	typ := val.Type()
+
+	if typ.Kind() != reflect.Func {
+		panic(fmt.Sprintf("factory %s is not a function", typ))
+	}
+
+	count := typ.NumIn()
+	deps := make([]reflect.Value, count)
+
+	for i := 0; i < count; i++ {
+		ptyp := typ.In(i)
+		if ptyp.Kind() == reflect.Pointer {
+			ptyp = ptyp.Elem()
+		}
+
+		p := getTypeProvider(ptyp)
+
+		if p.typ == controllerPr {
+			panic(fmt.Sprintf("no provider found for type %s", p.valTyp))
+		}
+
+		deps[i] = p.getInstance()
+	}
+
+	return deps
+}
 
 type provider struct {
 	typ providerType
@@ -37,18 +69,7 @@ func (p *provider) getInstance() reflect.Value {
 		return *p.value
 	}
 
-	depsCount := p.constructor.Type().NumIn()
-	deps := make([]reflect.Value, depsCount)
-
-	for i := 0; i < depsCount; i++ {
-		depP := getTypeProvider(p.constructor.Type().In(i))
-		if depP.typ == controllerPr {
-			panic(fmt.Sprintf("no provider found for type %s", depP.valTyp))
-		}
-
-		deps[i] = depP.getInstance()
-	}
-
+	deps := resolveValueDeps(p.constructor)
 	instance := p.constructor.Call(deps)[0]
 
 	if p.lifetime == singleton {
@@ -58,9 +79,21 @@ func (p *provider) getInstance() reflect.Value {
 	return instance
 }
 
-var providers = make(map[reflect.Type]*provider)
+type Providers map[reflect.Type]*provider
 
-func addTypeProvider(valTyp reflect.Type, lifetime Lifetime, typ providerType, constructor any) {
+var providers Providers = make(map[reflect.Type]*provider)
+
+// GetProvidersUnsafe returns a slice of internal providers
+// Use it only when it's really needed
+func GetProvidersUnsafe() Providers {
+	return providers
+}
+
+func addTypeProvider(lifetime Lifetime, typ providerType, constructor any, valTyp reflect.Type) {
+	if valTyp.Kind() == reflect.Pointer {
+		valTyp = valTyp.Elem()
+	}
+
 	pvdr := &provider{
 		typ:         typ,
 		valTyp:      valTyp,
@@ -72,22 +105,28 @@ func addTypeProvider(valTyp reflect.Type, lifetime Lifetime, typ providerType, c
 	providers[valTyp] = pvdr
 }
 
-func addProvider[TType any](lifetime Lifetime, constructor any, typ providerType) {
+func addProvider[TType any](typ providerType, lifetime Lifetime, constructor any) {
 	valTyp := reflect.TypeOf((*TType)(nil)).Elem()
 	constrTyp := reflect.TypeOf(constructor)
 	retTyp := constrTyp.Out(0)
 
-	if !retTyp.AssignableTo(valTyp) {
-		panic(fmt.Sprintf("constructor %v return type %v is not assignable to %v", constrTyp.Name(), retTyp, valTyp))
+	if (valTyp.Kind() == reflect.Interface &&
+		retTyp.Kind() != reflect.Pointer) ||
+		valTyp.Kind() == reflect.Struct {
+		retTyp = retTyp.Elem()
 	}
 
-	addTypeProvider(valTyp, lifetime, typ, constructor)
+	if !retTyp.AssignableTo(valTyp) {
+		panic(fmt.Sprintf("constructor '%v' return type '%v' is not assignable to '%v'", constrTyp, retTyp, valTyp))
+	}
+
+	addTypeProvider(lifetime, typ, constructor, valTyp)
 }
 
 func getTypeProvider(typ reflect.Type) *provider {
-	p := providers[typ]
-	if p == nil {
-		panic(fmt.Sprintf("not provider found for type %s", typ))
+	p, ok := providers[typ]
+	if !ok || p == nil {
+		panic(fmt.Sprintf("no provider found for type %s", typ))
 	}
 
 	return p
