@@ -13,17 +13,17 @@ type Lifetime int
 
 const (
 	singleton Lifetime = iota + 1
-	scoped             = iota + 1
-	transient          = iota + 1
+	scoped
+	transient
 )
 
 type providerType int
 
 const (
-	servicePr    providerType = iota + 1
-	controllerPr              = iota + 1
-	valuePr                   = iota + 1
-	configPr                  = iota + 1
+	servicePr providerType = iota + 1
+	controllerPr
+	valuePr
+	configPr
 )
 
 func resolveValueDeps(val reflect.Value) []reflect.Value {
