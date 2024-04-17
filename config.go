@@ -1,9 +1,14 @@
+// 🔥 GoNet is the first full-fledged framework made for Golang!
+// ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
+// 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
+
 package gonet
 
 import (
 	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
 	"os"
+	"reflect"
 )
 
 func newConfig[T any]() T {
@@ -28,5 +33,28 @@ func newConfig[T any]() T {
 
 func AddConfig[T any]() {
 	cfg := newConfig[T]()
-	AddValue[T](cfg)
+
+	val := reflect.ValueOf(cfg)
+	valTyp := val.Type()
+
+	p := &provider{
+		typ:    configPr,
+		valTyp: valTyp,
+		value:  &val,
+		constructor: reflect.ValueOf(func() T {
+			return cfg
+		}),
+		lifetime: singleton,
+	}
+
+	providers[valTyp] = p
+}
+
+func GetConfig[T any]() T {
+	p := getProvider[T]()
+	if p.typ != configPr {
+		panic(fmt.Sprintf("no config found for type: %v", p.valTyp))
+	}
+
+	return p.value.Interface().(T)
 }
