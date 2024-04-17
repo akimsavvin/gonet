@@ -1,3 +1,7 @@
+// 🔥 GoNet is the first full-fledged framework made for Golang!
+// ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
+// 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
+
 package gonet
 
 import (
@@ -5,19 +9,15 @@ import (
 	"reflect"
 )
 
-type Controller interface {
-	Register(g *ApiGroup)
-}
-
 func AddController(constructor any) {
 	validateConstructor(constructor)
 	typ := reflect.TypeOf(constructor).Out(0)
 	ctrlTyp := reflect.TypeOf((*Controller)(nil)).Elem()
 	if !typ.Implements(ctrlTyp) {
-		panic(fmt.Sprintf("controller %s does not implement Constructor interface", typ.Name()))
+		panic(fmt.Sprintf("controller %s does not implement controller interface", typ.Name()))
 	}
 
-	addTypeProvider(typ, singleton, controllerPr, constructor)
+	addTypeProvider(singleton, controllerPr, constructor, typ)
 }
 
 func getControllers() []Controller {
