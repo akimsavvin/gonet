@@ -1,5 +1,4 @@
 # GoNet framework
-
 ___
 GoNet is the first Golang framework with generic-based dependency injection, advanced routing, gRPC, kafka and
 websockets support and an extensive collection of other tools.
