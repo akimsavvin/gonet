@@ -92,11 +92,12 @@ func (err ErrValidationError) Error() string {
 }
 
 type ErrInvalidBody struct {
-	Errors []ErrValidationError `json:"errors" xml:"errors" yaml:"errors" bson:"errors"`
+	Message string               `json:"message"`
+	Errors  []ErrValidationError `json:"errors" xml:"errors" yaml:"errors" bson:"errors"`
 }
 
 func (err ErrInvalidBody) Error() string {
-	return "Some errors occurred while validating your request"
+	return err.Message
 }
 
 func getTagIntValue(structTag reflect.StructTag, name string) (int, bool) {
@@ -162,7 +163,7 @@ func (ctx *ctx) Bind(ptr any) bool {
 			if minExists && length < minVal {
 				validErrs = append(validErrs, ErrValidationError{
 					fmt.Sprintf(
-						"%s length must be at least %d",
+						"%s length must be at least %d symbols",
 						structField.Name, minVal,
 					),
 				})
@@ -171,7 +172,7 @@ func (ctx *ctx) Bind(ptr any) bool {
 			if maxExists && length > maxVal {
 				validErrs = append(validErrs, ErrValidationError{
 					fmt.Sprintf(
-						"%s length must be not more than %d",
+						"%s length must be not more than %d symbols",
 						structField.Name, maxVal,
 					),
 				})
@@ -237,7 +238,8 @@ func (ctx *ctx) Bind(ptr any) bool {
 
 	if len(validErrs) != 0 {
 		err = ErrInvalidBody{
-			Errors: validErrs,
+			Message: "Some errors occurred while validating your request",
+			Errors:  validErrs,
 		}
 
 		ctx.err = err
