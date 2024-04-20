@@ -7,7 +7,9 @@ package gonet
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -138,9 +140,13 @@ func (ctx *ctx) writeErr(err error) {
 func (ctx *ctx) Bind(ptr any) bool {
 	defer ctx.req.Body.Close()
 
-	// TODO: validate for empty body
 	err := json.NewDecoder(ctx.req.Body).Decode(ptr)
 	if err != nil {
+		if errors.Is(err, io.EOF) {
+			ctx.writeErr(errors.New("request body can not be empty"))
+			return false
+		}
+
 		ctx.writeErr(err)
 		return false
 	}
