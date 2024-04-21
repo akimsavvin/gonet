@@ -106,7 +106,7 @@ func addTypeProvider(lifetime Lifetime, typ providerType, constructor any, valTy
 }
 
 func addProvider[TType any](typ providerType, lifetime Lifetime, constructor any) {
-	valTyp := reflect.TypeOf((*TType)(nil)).Elem()
+	valTyp := Get
 	constrTyp := reflect.TypeOf(constructor)
 	retTyp := constrTyp.Out(0)
 
@@ -133,6 +133,6 @@ func getTypeProvider(typ reflect.Type) *provider {
 }
 
 func getProvider[TProvider any]() *provider {
-	typ := reflect.TypeOf((*TProvider)(nil)).Elem()
+	typ := getGenericType[TProvider]()
 	return getTypeProvider(typ)
 }
