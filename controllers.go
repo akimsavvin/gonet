@@ -14,7 +14,7 @@ func AddController(constructor any) {
 	typ := reflect.TypeOf(constructor).Out(0)
 	ctrlTyp := reflect.TypeOf((*Controller)(nil)).Elem()
 	if !typ.Implements(ctrlTyp) {
-		panic(fmt.Sprintf("controller %s does not implement controller interface", typ.Name()))
+		panic(fmt.Sprintf("controller %s does not implement gonet.Controller interface", typ))
 	}
 
 	addTypeProvider(singleton, controllerPr, constructor, typ)
