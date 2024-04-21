@@ -126,7 +126,7 @@ func main() {
 GoNet provides advanced routing system, based on controllers.
 
 Difference between services and controllers is that AddController method does not have a required generic and a
-controller struct must have a **Register(router gonet.Router)** method.
+controller struct must have a **Register(cb gonet.ControllerBuilder)** method.
 
 **gonet.Router** is an interface which has all the necessary methods to define a routing system, including Use and all
 the http methods methods. You can also add a controller prefix (as in .NET and other frameworks) with *
@@ -160,9 +160,9 @@ func NewUserController(svc *services.UserService) *UserController {
 	}
 }
 
-func (c *UserController) Register(router gonet.Router) {
-	router.SetPrefix("/users")
-	router.POST("/", c.create)
+func (c *UserController) Register(cb gonet.ConrtollerBuilder) {
+	cb.SetPrefix("/users")
+	cb.POST("/", c.create)
 }
 
 func (c *UserController) create(ctx gonet.Context) gonet.ActionResult {
