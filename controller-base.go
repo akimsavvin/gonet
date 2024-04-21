@@ -8,11 +8,7 @@ import (
 	"net/http"
 )
 
-type ControllerBase struct {
-	Request  *http.Request
-	Response *http.Response
-	Writer   http.ResponseWriter
-}
+type ControllerBase struct{}
 
 type actionResult struct {
 	statusCode int
