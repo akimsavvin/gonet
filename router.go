@@ -11,16 +11,17 @@ import (
 	"strings"
 )
 
-type router struct {
-	Handler     *http.ServeMux
-	prefix      string
-	middlewares []Middleware
+func newCBuilder(mux *http.ServeMux) *cBuilder {
+	return &cBuilder{
+		mux: mux,
+	}
 }
 
-func newRouter() *router {
-	return &router{
-		Handler: http.NewServeMux(),
-	}
+// cBuilder is a controller builder passed as the first argument in the controller Register method
+type cBuilder struct {
+	mux         *http.ServeMux
+	prefix      string
+	middlewares []Middleware
 }
 
 func applyMiddleware(h HandlerFunc, middlewares ...Middleware) HandlerFunc {
@@ -31,51 +32,51 @@ func applyMiddleware(h HandlerFunc, middlewares ...Middleware) HandlerFunc {
 	return h
 }
 
-func (r *router) SetPrefix(prefix string) {
-	r.prefix = prefix
+func (cb *cBuilder) SetPrefix(prefix string) {
+	cb.prefix = prefix
 }
 
-func (r *router) Use(middlewares ...Middleware) {
-	r.middlewares = append(r.middlewares, middlewares...)
+func (cb *cBuilder) Use(middlewares ...Middleware) {
+	cb.middlewares = append(cb.middlewares, middlewares...)
 }
 
-func (r *router) GET(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodGet, pattern, handler, middlewares...)
+func (cb *cBuilder) GET(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodGet, pattern, handler, middlewares...)
 }
 
-func (r *router) HEAD(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodHead, pattern, handler, middlewares...)
+func (cb *cBuilder) HEAD(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodHead, pattern, handler, middlewares...)
 }
 
-func (r *router) POST(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodPost, pattern, handler, middlewares...)
+func (cb *cBuilder) POST(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodPost, pattern, handler, middlewares...)
 }
 
-func (r *router) PUT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodPut, pattern, handler, middlewares...)
+func (cb *cBuilder) PUT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodPut, pattern, handler, middlewares...)
 }
 
-func (r *router) PATCH(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodPatch, pattern, handler, middlewares...)
+func (cb *cBuilder) PATCH(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodPatch, pattern, handler, middlewares...)
 }
 
-func (r *router) DELETE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodDelete, pattern, handler, middlewares...)
+func (cb *cBuilder) DELETE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodDelete, pattern, handler, middlewares...)
 }
 
-func (r *router) CONNECT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodConnect, pattern, handler, middlewares...)
+func (cb *cBuilder) CONNECT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodConnect, pattern, handler, middlewares...)
 }
 
-func (r *router) OPTIONS(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodOptions, pattern, handler, middlewares...)
+func (cb *cBuilder) OPTIONS(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodOptions, pattern, handler, middlewares...)
 }
 
-func (r *router) TRACE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	r.handle(MethodTrace, pattern, handler, middlewares...)
+func (cb *cBuilder) TRACE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	cb.handle(MethodTrace, pattern, handler, middlewares...)
 }
 
-func (r *router) getHandlerPattern(method Method, pattern string) string {
+func (cb *cBuilder) buildHandlerPattern(method Method, pattern string) string {
 	var patternBuilder strings.Builder
 	patternBuilder.WriteString(string(method))
 	patternBuilder.WriteString(" ")
@@ -84,8 +85,8 @@ func (r *router) getHandlerPattern(method Method, pattern string) string {
 		patternBuilder.WriteString(globalPrefix)
 	}
 
-	if r.prefix != "" {
-		patternBuilder.WriteString(r.prefix)
+	if cb.prefix != "" {
+		patternBuilder.WriteString(cb.prefix)
 	}
 
 	pattern = validatePrefix(pattern)
@@ -94,13 +95,13 @@ func (r *router) getHandlerPattern(method Method, pattern string) string {
 	return patternBuilder.String()
 }
 
-func (r *router) handle(method Method, pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	handlerPattern := r.getHandlerPattern(method, pattern)
+func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, middlewares ...Middleware) {
+	handlerPattern := cb.buildHandlerPattern(method, pattern)
 
-	middlewares = append(r.middlewares, middlewares...)
+	middlewares = append(cb.middlewares, middlewares...)
 	handler = applyMiddleware(handler, middlewares...)
 
-	r.Handler.HandleFunc(handlerPattern, func(w http.ResponseWriter, req *http.Request) {
+	cb.mux.HandleFunc(handlerPattern, func(w http.ResponseWriter, req *http.Request) {
 		ctx := newCtx(w, req)
 		result := handler(ctx)
 

@@ -12,10 +12,10 @@ import (
 type H = map[string]any
 
 type Controller interface {
-	Register(g Router)
+	Register(b ControllerBuilder)
 }
 
-type Router interface {
+type ControllerBuilder interface {
 	SetPrefix(prefix string)
 	Use(middlewares ...Middleware)
 
