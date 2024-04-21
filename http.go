@@ -40,10 +40,10 @@ func AddGlobalPrefix(prefix string) {
 }
 
 func StartHttp(addresses ...string) {
-	r := newRouter()
+	mux := http.NewServeMux()
 	controllers := getControllers()
 	for _, controller := range controllers {
-		controller.Register(r)
+		controller.Register(newCBuilder(mux))
 	}
 
 	address := DefaultHTTPAddress
@@ -54,7 +54,7 @@ func StartHttp(addresses ...string) {
 
 	server := &http.Server{
 		Addr:    address,
-		Handler: r.Handler,
+		Handler: mux,
 	}
 
 	go func() {
