@@ -103,15 +103,21 @@ func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, m
 
 	cb.mux.HandleFunc(handlerPattern, func(w http.ResponseWriter, req *http.Request) {
 		ctx := newCtx(w, req)
-		result := handler(ctx)
+		res := handler(ctx)
 
 		if ctx.hasErr() {
 			return
 		}
 
-		if result.HasPayload() {
+		if res.HasPayload() {
+			for k, v := range res.Header() {
+				for _, v := range v {
+					w.Header().Add(k, v)
+				}
+			}
+
 			if w.Header().Get(HeaderContentType) == "" {
-				switch reflect.TypeOf(result.Payload()).Kind() {
+				switch reflect.TypeOf(res.Payload()).Kind() {
 				case reflect.String:
 					w.Header().Set(HeaderContentType, MIMETextPlainCharsetUTF8)
 				case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
@@ -121,9 +127,9 @@ func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, m
 				}
 			}
 
-			w.WriteHeader(result.StatusCode())
+			w.WriteHeader(res.StatusCode())
 
-			serialized, err := json.Marshal(result.Payload())
+			serialized, err := json.Marshal(res.Payload())
 			if err != nil {
 				ctx.writeErr(err)
 				return
@@ -135,7 +141,7 @@ func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, m
 				return
 			}
 		} else {
-			w.WriteHeader(result.StatusCode())
+			w.WriteHeader(res.StatusCode())
 		}
 	})
 }

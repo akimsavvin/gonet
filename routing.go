@@ -33,10 +33,19 @@ type ControllerBuilder interface {
 type HandlerFunc func(ctx Context) ActionResult
 
 type ActionResult interface {
+	/* ======================== */
+	/* ======= Getters ======== */
+	/* ======================== */
 	StatusCode() int
 	Payload() any
 	HasPayload() bool
 	Header() http.Header
+
+	/* ======================== */
+	/* ======= Headers ======== */
+	/* ======================== */
+	WithHeader(name string, value string) ActionResult
+	WithHeaders(headers http.Header) ActionResult
 }
 
 type NextFunc = HandlerFunc
