@@ -11,7 +11,7 @@ const (
 )
 
 func GetCurrentEnv() (string, bool) {
-	env := os.Getenv("ENVIRONMENT")
+	env := os.Getenv("GONET_ENVIRONMENT")
 	ok := env != ""
 
 	return env, ok
