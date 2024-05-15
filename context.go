@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/akimsavvin/gonet/routing"
 	"io"
 	"net/http"
 	"reflect"
@@ -18,20 +19,20 @@ import (
 )
 
 type ctx struct {
-	req     *http.Request
-	rwriter http.ResponseWriter
+	req    *http.Request
+	writer http.ResponseWriter
 	// Mutex for keys
 	mu   sync.RWMutex
 	keys map[string]any
 	err  error
 }
 
-func newCtx(rwriter http.ResponseWriter, req *http.Request) *ctx {
+func newCtx(writer http.ResponseWriter, req *http.Request) *ctx {
 	return &ctx{
-		req:     req,
-		rwriter: rwriter,
-		mu:      sync.RWMutex{},
-		keys:    make(map[string]any),
+		req:    req,
+		writer: writer,
+		mu:     sync.RWMutex{},
+		keys:   make(map[string]any),
 	}
 }
 
@@ -56,7 +57,7 @@ func (ctx *ctx) Header() http.Header {
 }
 
 func (ctx *ctx) Writer() http.ResponseWriter {
-	return ctx.rwriter
+	return ctx.writer
 }
 
 /* ======================== */
@@ -124,14 +125,14 @@ func (ctx *ctx) hasErr() bool {
 func (ctx *ctx) writeErr(err error) {
 	ctx.err = err
 
-	ctx.rwriter.Header().Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
-	ctx.rwriter.WriteHeader(http.StatusInternalServerError)
+	ctx.writer.Header().Set(routing.HeaderContentType, routing.MIMEApplicationJSONCharsetUTF8)
+	ctx.writer.WriteHeader(http.StatusInternalServerError)
 
 	serialized, _ := json.Marshal(H{
 		"message": err.Error(),
 	})
 
-	_, err = ctx.rwriter.Write(serialized)
+	_, err = ctx.writer.Write(serialized)
 	if err != nil {
 		return
 	}
@@ -252,11 +253,11 @@ func (ctx *ctx) Bind(ptr any) bool {
 
 		serialized, _ := json.Marshal(err)
 
-		ctx.rwriter.Header().Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
-		ctx.rwriter.WriteHeader(StatusBadRequest)
-		_, err = ctx.rwriter.Write(serialized)
+		ctx.writer.Header().Set(routing.HeaderContentType, routing.MIMEApplicationJSONCharsetUTF8)
+		ctx.writer.WriteHeader(routing.StatusBadRequest)
+		_, err = ctx.writer.Write(serialized)
 		if err != nil {
-			http.Error(ctx.rwriter, err.Error(), StatusInternalServerError)
+			http.Error(ctx.writer, err.Error(), routing.StatusInternalServerError)
 		}
 
 		return false
