@@ -29,13 +29,7 @@ $ go get -u github.com/akimsavvin/gonet
 
 ## Dependency injection
 
-GoNet provides advanced DI tools. There are two ways of adding a new service:
-
-- gonet.AddScoped
-- gonet.AddSingleton
-
-The difference is in the service lifecycle. **AddSingleton** registers a service which is created only once and used
-every time its requested, while transient service is created newly for each injection.
+GoNet provides advanced DI tools.
 
 ### Example
 
@@ -67,10 +61,10 @@ func (s *UserService) LogSquared(x int) {
 }
 ```
 
-2. Create a provider for the needed service (Multiplier)
+2. Create a provider for the needed service (_Multiplier in this case_)
 
 ```go
-package utils
+package util
 
 type Multiplier struct{}
 
@@ -83,41 +77,176 @@ func (m *Multiplier) Multiply(x, y int) int {
 }
 ```
 
-3. Now you can register services and the GoNet will panic if there are any wrong implementations
+3. Now you can register services with required lifetime (_see lifetimes later_) and the GoNet will panic if any service does not implement provided type
 
 ```go
 package main
 
 import (
-	"github.com/akimsavvin/gonet"
+	"github.com/akimsavvin/gonet/di"
 	"services"
-	"utils"
+	"util"
 )
 
 func main() {
-	gonet.AddService[services.Multiplier](utils.NewMultiplier)
-	gonet.AddService[services.UserService](services.NewUserService)
+	di.AddTransient[services.Multiplier](util.NewMultiplier)
+	di.AddTransient[services.UserService](services.NewUserService)
 }
 ```
 
-3. Now you can use you service
+3. Now you can get your service as follows
 
 ```go
 package main
 
 import (
-	"github.com/akimsavvin/gonet"
+	"github.com/akimsavvin/gonet/di"
 	"services"
-	"utils"
+	"util"
 )
 
 func main() {
-	gonet.AddService[services.Multiplier](utils.NewMultiplier)
-	gonet.AddService[services.UserService](services.NewUserService)
+	di.AddTransient[services.Multiplier](util.NewMultiplier)
+	di.AddTransient[services.UserService](services.NewUserService)
 
-	service := gonet.GetService[services.UserService]()
+	service := di.GetService[services.UserService]()
 	service.LogSquared(4) // 16
 	service.LogSquared(8) // 64
+}
+```
+
+### Lifetimes
+
+You can add your services with different lifetimes\
+Service lifetime determines when the service will be created and how long will it live
+
+#### Singleton
+Services with this lifetime are only created once and every time it's requested it takes an existing instance. You can singletons as follows:
+
+```go
+package main
+
+import (
+	"abstract"
+	"fmt"
+	"github.com/akimsavvin/gonet/di"
+	"lib"
+)
+
+type MyService struct {
+	// Some external interface
+	otherServ abstract.MyInterface
+}
+
+func (s *MyService) Do() {
+	s.otherServ.Call()
+}
+
+func NewMyService(otherServ abstract.MyInterface) *MyService {
+	fmt.Println("Created new MyService instance")
+	return &MyService{
+		otherServ: otherServ,
+	}
+}
+
+func main() {
+	// Some kind of interface implementation
+	di.AddSingleton[abstract.MyInterface](lib.NewIntegration)
+	di.AddSingleton[*MyService](NewMyService)
+
+	// Creates a new MyService instance
+	serv := di.GetService[*MyService]() // Created new MyService instance
+	serv.Do()
+
+	// Takes the existing instance
+	serv2 := di.GetService[*MyService]() // ...
+	serv2.Do()
+
+	fmt.Println(serv == serv2) // true
+}
+```
+
+#### Scoped
+Services with this lifetime are similiar with singleton, but only inside of a scope. On the other hand, you can not get scoped services outside the scope. A scope is basically created for each request, but it can be created manually with di.NewScope()
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/akimsavvin/gonet/di"
+)
+
+type MyService struct{}
+
+func (s *MyService) Do() {...}
+
+func NewMyService() *MyService {
+	fmt.Println("Created new MyService instance")
+	return new(MyService)
+}
+
+func main() {
+	di.AddScoped[*MyService](NewMyService)
+	
+	// Create new scope
+	scope := di.NewScope()
+
+	// Panics
+	di.GetService[*MyService]()
+
+	// Creates a new MyService instance
+	serv := di.GetScopedService[*MyService](scope) // Created new MyService instance
+	serv.Do()
+
+	// Takes the existing instance
+	serv2 := di.GetScopedService[*MyService](scope)
+	serv2.Do()
+
+	// Create a second scope
+	scope2 := di.NewScope()
+
+	// The new service is created for this scope
+	serv3 := di.GetScopedService[*MyService](scope2)
+	serv3.Do()
+
+	fmt.Println(serv == serv2) // true
+	fmt.Println(serv == serv3) // false
+}
+```
+
+#### Transient
+Services with this lifetime are created on each request
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/akimsavvin/gonet/di"
+)
+
+type MyService struct{}
+
+func (s *MyService) Do() {...}
+
+func NewMyService() *MyService {
+	fmt.Println("Created new MyService instance")
+	return new(MyService)
+}
+
+func main() {
+	di.AddTransient[*MyService](NewMyService)
+
+	// Creates a new MyService instance
+	serv := di.GetService[*MyService]() // Created new MyService instance
+	serv.Do()
+
+	// Creates a new MyService instance
+	serv2 := di.GetService[*MyService]() // Created new MyService instance
+	serv2.Do()
+
+	fmt.Println(serv == serv2) // false
 }
 ```
 
@@ -126,7 +255,7 @@ func main() {
 GoNet provides advanced routing system, based on controllers.
 
 Difference between services and controllers is that AddController method does not have a required generic and a
-controller struct must have a **Register(cb gonet.ControllerBuilder)** method.
+controller struct must have a **Builder(cb routig.ControllerBuilder)** method.
 
 **gonet.Router** is an interface which has all the necessary methods to define a routing system, including Use and all
 the http methods methods. You can also add a controller prefix (as in .NET and other frameworks) with *
