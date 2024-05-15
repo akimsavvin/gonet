@@ -5,6 +5,7 @@
 package di
 
 import (
+	"github.com/akimsavvin/gonet/generic"
 	"log"
 	"reflect"
 )
@@ -59,7 +60,7 @@ func (sc *servColl) addSD(sd *servDescriptor) {
 	sc.sds[sd.typ] = sd
 }
 
-// getTypSD returns a service descriptor for the provided type
+// getTypSD returns a service descriptor for the provided generic
 func (sc *servColl) getTypSD(typ reflect.Type) *servDescriptor {
 	return sc.sds[typ]
 }
@@ -76,20 +77,20 @@ func (sc *servColl) resolveSDDeps(sd *servDescriptor) []reflect.Value {
 	return deps
 }
 
-// getTypSD returns a service descriptor for the provided type
+// getTypSD returns a service descriptor for the provided generic
 func (sc *servColl) getTypVal(typ reflect.Type) reflect.Value {
 	sd := sc.getTypSD(typ)
 
 	if sd == nil {
-		log.Panicf("Could not find service descriptor for type %v\n", typ)
+		log.Panicf("Could not find service descriptor for generic %v\n", typ)
 	}
 
 	if sd.lifetime == LifetimeScoped && sc.lifetime != LifetimeScoped {
-		log.Panicf("Can not create a service instance for type %v outside of a scope\n", typ)
+		log.Panicf("Can not create a scoped service instance for generic %v outside of a scope\n", typ)
 	}
 
 	if sc.lifetime == LifetimeScoped && sd.lifetime != LifetimeScoped {
-		log.Panicf("Can not create a non-scoped service instance for type %v in a scoped service collection\n", typ)
+		log.Panicf("Can not create a non-scoped service instance for generic %v in a scoped service collection\n", typ)
 	}
 
 	if sc.lifetime == LifetimeSingleton &&
@@ -98,7 +99,7 @@ func (sc *servColl) getTypVal(typ reflect.Type) reflect.Value {
 		return *sd.value
 	}
 
-	deps := make([]reflect.Value, sd.constr.depsCount)
+	deps := sc.resolveSDDeps(sd)
 	val := sd.newVal(deps)
 
 	if sd.lifetime == LifetimeSingleton || sd.lifetime == LifetimeScoped {
@@ -121,10 +122,6 @@ func (sc *servColl) getScopedColl() *servColl {
 	return scopedColl
 }
 
-func getGenericType[T any]() reflect.Type {
-	return reflect.TypeOf((*T)(nil)).Elem()
-}
-
 func AddTransient[T any](constr any) {
 	AddService[T](constr, LifetimeTransient)
 }
@@ -138,7 +135,7 @@ func AddSingleton[T any](constr any) {
 }
 
 func AddService[T any](constr any, lifetime Lifetime) {
-	typ := getGenericType[T]()
+	typ := generic.GetType[T]()
 	AddServiceType(typ, reflect.ValueOf(constr), lifetime)
 }
 
@@ -154,10 +151,19 @@ func AddServiceType(typ reflect.Type, constrVal reflect.Value, lifetime Lifetime
 }
 
 func GetService[T any]() T {
-	typ := getGenericType[T]()
+	typ := generic.GetType[T]()
 	return GetServiceByType(typ).Interface().(T)
 }
 
 func GetServiceByType(typ reflect.Type) reflect.Value {
 	return defaultContainer.getTypVal(typ)
+}
+
+func GetScopedService[T any](scope *Scope) T {
+	typ := generic.GetType[T]()
+	return GetScopedServiceByType(scope, typ).Interface().(T)
+}
+
+func GetScopedServiceByType(scope *Scope, typ reflect.Type) reflect.Value {
+	return scope.getTypVal(typ)
 }

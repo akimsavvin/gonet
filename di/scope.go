@@ -6,19 +6,19 @@ package di
 
 import "reflect"
 
-type scope struct {
+type Scope struct {
 	cont *container
 	sc   *servColl
 }
 
-func newScope(cont *container) *scope {
-	return &scope{
+func newScope(cont *container) *Scope {
+	return &Scope{
 		cont: cont,
 		sc:   cont.getScopedColl(),
 	}
 }
 
-func (s *scope) getTypVal(typ reflect.Type) reflect.Value {
+func (s *Scope) getTypVal(typ reflect.Type) reflect.Value {
 	scopedSD := s.sc.getTypSD(typ)
 	if scopedSD == nil {
 		return s.cont.getTypVal(typ)

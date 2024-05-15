@@ -1,7 +1,7 @@
-package gonet
+package generic
 
 import "reflect"
 
-func getGenericType[T any]() reflect.Type {
+func GetType[T any]() reflect.Type {
 	return reflect.TypeOf((*T)(nil)).Elem()
 }

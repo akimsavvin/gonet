@@ -34,6 +34,10 @@ func (c *container) getTypVal(typ reflect.Type) reflect.Value {
 	return c.sc.getTypVal(typ)
 }
 
-func (c *container) newScope() *scope {
+func (c *container) newScope() *Scope {
 	return newScope(c)
+}
+
+func NewScope() *Scope {
+	return defaultContainer.newScope()
 }
