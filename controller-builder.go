@@ -6,6 +6,7 @@ package gonet
 
 import (
 	"encoding/json"
+	"github.com/akimsavvin/gonet/routing"
 	"net/http"
 	"reflect"
 	"strings"
@@ -41,42 +42,42 @@ func (cb *cBuilder) Use(middlewares ...Middleware) {
 }
 
 func (cb *cBuilder) GET(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodGet, pattern, handler, middlewares...)
+	cb.handle(routing.MethodGet, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) HEAD(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodHead, pattern, handler, middlewares...)
+	cb.handle(routing.MethodHead, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) POST(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodPost, pattern, handler, middlewares...)
+	cb.handle(routing.MethodPost, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) PUT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodPut, pattern, handler, middlewares...)
+	cb.handle(routing.MethodPut, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) PATCH(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodPatch, pattern, handler, middlewares...)
+	cb.handle(routing.MethodPatch, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) DELETE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodDelete, pattern, handler, middlewares...)
+	cb.handle(routing.MethodDelete, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) CONNECT(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodConnect, pattern, handler, middlewares...)
+	cb.handle(routing.MethodConnect, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) OPTIONS(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodOptions, pattern, handler, middlewares...)
+	cb.handle(routing.MethodOptions, pattern, handler, middlewares...)
 }
 
 func (cb *cBuilder) TRACE(pattern string, handler HandlerFunc, middlewares ...Middleware) {
-	cb.handle(MethodTrace, pattern, handler, middlewares...)
+	cb.handle(routing.MethodTrace, pattern, handler, middlewares...)
 }
 
-func (cb *cBuilder) buildHandlerPattern(method Method, pattern string) string {
+func (cb *cBuilder) buildHandlerPattern(method routing.Method, pattern string) string {
 	var patternBuilder strings.Builder
 	patternBuilder.WriteString(string(method))
 	patternBuilder.WriteString(" ")
@@ -95,7 +96,7 @@ func (cb *cBuilder) buildHandlerPattern(method Method, pattern string) string {
 	return patternBuilder.String()
 }
 
-func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, middlewares ...Middleware) {
+func (cb *cBuilder) handle(method routing.Method, pattern string, handler HandlerFunc, middlewares ...Middleware) {
 	handlerPattern := cb.buildHandlerPattern(method, pattern)
 
 	middlewares = append(cb.middlewares, middlewares...)
@@ -116,14 +117,14 @@ func (cb *cBuilder) handle(method Method, pattern string, handler HandlerFunc, m
 				}
 			}
 
-			if w.Header().Get(HeaderContentType) == "" {
+			if w.Header().Get(routing.HeaderContentType) == "" {
 				switch reflect.TypeOf(res.Payload()).Kind() {
 				case reflect.String:
-					w.Header().Set(HeaderContentType, MIMETextPlainCharsetUTF8)
+					w.Header().Set(routing.HeaderContentType, routing.MIMETextPlainCharsetUTF8)
 				case reflect.Struct, reflect.Map, reflect.Slice, reflect.Array:
-					w.Header().Set(HeaderContentType, MIMEApplicationJSONCharsetUTF8)
+					w.Header().Set(routing.HeaderContentType, routing.MIMEApplicationJSONCharsetUTF8)
 				default:
-					panic("invalid content type")
+					panic("invalid content generic")
 				}
 			}
 

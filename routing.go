@@ -6,13 +6,14 @@ package gonet
 
 import (
 	"context"
+	"github.com/akimsavvin/gonet/routing"
 	"net/http"
 )
 
 type H = map[string]any
 
 type Controller interface {
-	Register(b ControllerBuilder)
+	Build(b ControllerBuilder)
 }
 
 type ControllerBuilder interface {
@@ -30,7 +31,7 @@ type ControllerBuilder interface {
 	TRACE(pattern string, handler HandlerFunc, middlewares ...Middleware)
 }
 
-type HandlerFunc func(ctx Context) ActionResult
+type HandlerFunc func(ctx Context) routing.Result
 
 type ActionResult interface {
 	/* ======================== */

@@ -2,7 +2,7 @@
 // ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
 // 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
 
-package gonet
+package routing
 
 type Method string
 

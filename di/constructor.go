@@ -5,6 +5,7 @@
 package di
 
 import (
+	"github.com/akimsavvin/gonet/generic"
 	"log"
 	"reflect"
 )
@@ -35,7 +36,8 @@ func mustValidateConstrVal(typ reflect.Type, constrVal reflect.Value) {
 		log.Panicf("%v constructor is not a function\n", typ)
 	}
 
-	numOut := constrVal.Type().NumOut()
+	constrTyp := constrVal.Type()
+	numOut := constrTyp.NumOut()
 
 	if numOut > 2 {
 		log.Panicf("%v constructor has to many return values\n", typ)
@@ -43,12 +45,12 @@ func mustValidateConstrVal(typ reflect.Type, constrVal reflect.Value) {
 		log.Panicf("%v constructor has to few return values\n", typ)
 	}
 
-	errTyp := getGenericType[error]()
-	if numOut == 2 && !constrVal.Type().Out(1).Implements(errTyp) {
-		log.Panicf("%v constructor second return value is of type error\n", typ)
+	errTyp := generic.GetType[error]()
+	if numOut == 2 && !constrTyp.Out(1).Implements(errTyp) {
+		log.Panicf("%v constructor second return value is of generic error\n", typ)
 	}
 
-	if constrVal.Type().Out(0).AssignableTo(typ) {
-		log.Panicf("%v constructor return value is not assignable to this type\n", typ)
+	if !constrTyp.Out(0).AssignableTo(typ) {
+		log.Panicf("%v constructor return value is not assignable to this generic\n", typ)
 	}
 }
