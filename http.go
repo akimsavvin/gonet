@@ -43,7 +43,7 @@ func StartHttp(addresses ...string) {
 	mux := http.NewServeMux()
 	controllers := getControllers()
 	for _, controller := range controllers {
-		controller.Register(newCBuilder(mux))
+		controller.Build(newCBuilder(mux))
 	}
 
 	address := DefaultHTTPAddress
