@@ -8,17 +8,7 @@ type HandlerFunc func(ctx Context) Result
 
 type ControllerBuilder interface {
 	SetPrefix(prefix string)
-	Use(middlewares ...Middleware)
-
-	GET(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	HEAD(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	POST(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	PUT(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	PATCH(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	DELETE(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	CONNECT(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	OPTIONS(pattern string, handler HandlerFunc, middlewares ...Middleware)
-	TRACE(pattern string, handler HandlerFunc, middlewares ...Middleware)
+	Router
 }
 
 type Controller interface {

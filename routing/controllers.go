@@ -22,7 +22,7 @@ func mustValidateContrlConstr(constrVal reflect.Value) {
 	retTyp := constrTyp.Out(0)
 
 	if !retTyp.Implements(contrlTyp) {
-		log.Panicf("Controller %d does not implement routing.Controller interface", retTyp)
+		log.Panicf("Controller %d does not implement routing.Controller interface\n", retTyp)
 	}
 
 }
