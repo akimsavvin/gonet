@@ -31,7 +31,7 @@ type servDescriptor struct {
 func (sd servDescriptor) newVal(deps []reflect.Value) reflect.Value {
 	vals := sd.constr.val.Call(deps)
 
-	if sd.constr.hasErr && vals[1].IsNil() {
+	if sd.constr.hasErr && !vals[1].IsNil() {
 		err := vals[1].Interface()
 		log.Panicf("Could not create instance of %v due to error: %v\n", sd.typ, err)
 	}
