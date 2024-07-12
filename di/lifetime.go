@@ -4,10 +4,16 @@
 
 package di
 
+// Lifetime represents a service lifetime in the di container
 type Lifetime int
 
 const (
+	// LifetimeTransient a service is created for each request
 	LifetimeTransient Lifetime = iota + 1
-	LifetimeScoped             = iota + 1
-	LifetimeSingleton          = iota + 1
+
+	// LifetimeScoped a service is created once per scope
+	LifetimeScoped
+
+	// LifetimeSingleton a service is created once
+	LifetimeSingleton
 )

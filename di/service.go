@@ -2,14 +2,6 @@
 // ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
 // 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
 
-package di
-
-import (
-	"github.com/akimsavvin/gonet/generic"
-	"log"
-	"reflect"
-)
-
 // Singleton, Scoped, Transient
 
 // Collection: Singleton, Service: Singleton => Get or create service instance
@@ -20,6 +12,15 @@ import (
 // Collection: Scoped, Service: Scoped =>  Get or create service instance
 // Collection: Scoped, Service: Transient => Panic
 
+package di
+
+import (
+	"github.com/akimsavvin/gonet/generic"
+	"log"
+	"reflect"
+)
+
+// servDescriptor service description
 type servDescriptor struct {
 	typ      reflect.Type
 	constr   *constructor
@@ -28,6 +29,7 @@ type servDescriptor struct {
 	value *reflect.Value
 }
 
+// newVal crete a new service instance or panics if err
 func (sd servDescriptor) newVal(deps []reflect.Value) reflect.Value {
 	vals := sd.constr.val.Call(deps)
 
@@ -44,6 +46,7 @@ type servColl struct {
 	lifetime Lifetime
 }
 
+// newServColl creates a new service collection
 func newServColl(lifetime Lifetime) *servColl {
 	if lifetime == LifetimeTransient {
 		log.Panicf("Can not create transient service collection\n")
@@ -111,34 +114,44 @@ func (sc *servColl) getTypVal(typ reflect.Type) reflect.Value {
 
 // getScopedColl returns new service collection with only scoped service descriptors
 func (sc *servColl) getScopedColl() *servColl {
-	var scopedColl = newServColl(LifetimeScoped)
+	scopedColl := newServColl(LifetimeScoped)
 
 	for _, sd := range sc.sds {
 		if sd.lifetime == LifetimeScoped {
-			scopedColl.addSD(&*sd)
+			scopedColl.addSD(sd)
 		}
 	}
 
 	return scopedColl
 }
 
+// AddService adds a constructor for the provided type
+func AddService[T any](constr any) {
+	AddSingleton[T](constr)
+}
+
+// AddTransient adds a transient constructor for the T type
 func AddTransient[T any](constr any) {
-	AddService[T](constr, LifetimeTransient)
+	AddServiceLifetime[T](constr, LifetimeTransient)
 }
 
+// AddScoped adds a scoped constructor for the T type
 func AddScoped[T any](constr any) {
-	AddService[T](constr, LifetimeScoped)
+	AddServiceLifetime[T](constr, LifetimeScoped)
 }
 
+// AddSingleton adds a singleton constructor for the T type
 func AddSingleton[T any](constr any) {
-	AddService[T](constr, LifetimeSingleton)
+	AddServiceLifetime[T](constr, LifetimeSingleton)
 }
 
-func AddService[T any](constr any, lifetime Lifetime) {
+// AddServiceLifetime adds a constructor for the T type with the specified lifetime
+func AddServiceLifetime[T any](constr any, lifetime Lifetime) {
 	typ := generic.GetType[T]()
 	AddServiceType(typ, reflect.ValueOf(constr), lifetime)
 }
 
+// AddServiceType adds a constructor for the provided type with the specified lifetime
 func AddServiceType(typ reflect.Type, constrVal reflect.Value, lifetime Lifetime) {
 	mustValidateConstrVal(typ, constrVal)
 	sd := &servDescriptor{
@@ -150,20 +163,24 @@ func AddServiceType(typ reflect.Type, constrVal reflect.Value, lifetime Lifetime
 	defaultContainer.addSD(sd)
 }
 
+// GetService gets service for T
 func GetService[T any]() T {
 	typ := generic.GetType[T]()
 	return GetServiceByType(typ).Interface().(T)
 }
 
+// GetServiceByType gets service by the provided type
 func GetServiceByType(typ reflect.Type) reflect.Value {
 	return defaultContainer.getTypVal(typ)
 }
 
+// GetScopedService gets scoped service T in provided scope
 func GetScopedService[T any](scope *Scope) T {
 	typ := generic.GetType[T]()
 	return GetScopedServiceByType(scope, typ).Interface().(T)
 }
 
+// GetScopedServiceByType gets scoped service by the provided type in provided scope
 func GetScopedServiceByType(scope *Scope, typ reflect.Type) reflect.Value {
 	return scope.getTypVal(typ)
 }

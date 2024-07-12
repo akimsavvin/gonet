@@ -6,11 +6,13 @@ package di
 
 import "reflect"
 
+// Scope represents a scope for dependency injection
 type Scope struct {
 	cont *container
 	sc   *servColl
 }
 
+// creates a new Scope for the container
 func newScope(cont *container) *Scope {
 	return &Scope{
 		cont: cont,
@@ -18,6 +20,7 @@ func newScope(cont *container) *Scope {
 	}
 }
 
+// getTypVal gets a value for provided type
 func (s *Scope) getTypVal(typ reflect.Type) reflect.Value {
 	scopedSD := s.sc.getTypSD(typ)
 	if scopedSD == nil {
