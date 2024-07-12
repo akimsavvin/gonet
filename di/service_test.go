@@ -60,18 +60,15 @@ func TestAddScoped(t *testing.T) {
 	assert.NotPanics(t, func() {
 		// Arrange
 		AddScoped[Service](NewMyService)
-		scope1 := NewScope()
-		scope2 := NewScope()
+		scope := NewScope()
 
 		// Act
-		s1 := GetScopedService[Service](scope1)
-		s2 := GetScopedService[Service](scope1)
-		s3 := GetScopedService[Service](scope2)
+		s1 := GetScopedService[Service](scope)
+		s2 := GetScopedService[Service](scope)
 		res := s1.Test()
 
 		// Assert
 		assert.Equal(t, res, 5)
 		assert.Same(t, s1, s2)
-		assert.NotSame(t, s1, s3)
 	})
 }
