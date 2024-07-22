@@ -29,10 +29,10 @@ func buildCfgFileName(typ Type) string {
 	}
 
 	var cfgNameBuilder strings.Builder
-	cfgNameBuilder.WriteString("config")
+	cfgNameBuilder.WriteString("config.")
 
 	if env, ok := env.Current(); ok {
-		cfgNameBuilder.WriteString("." + env)
+		cfgNameBuilder.WriteString(env + ".")
 	}
 
 	cfgNameBuilder.WriteString(cfgExts[typ])
