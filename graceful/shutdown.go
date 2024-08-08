@@ -24,3 +24,8 @@ func OnShutdown(callback ShutdownFunc) {
 
 	callback(ctx)
 }
+
+// Context creates a new context cancelled on os.Interrupt or os.Kill signals
+func Context() (ctx context.Context, stop context.CancelFunc) {
+	return signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+}

@@ -22,11 +22,9 @@ import (
 
 // servDescriptor service description
 type servDescriptor struct {
-	typ      reflect.Type
-	constr   *constructor
-	lifetime Lifetime
-	// value for singleton and scoped services
-	value *reflect.Value
+	typ    reflect.Type
+	constr *constructor
+	value  *reflect.Value
 }
 
 // newVal crete a new service instance or panics if err
@@ -42,19 +40,13 @@ func (sd servDescriptor) newVal(deps []reflect.Value) reflect.Value {
 }
 
 type servColl struct {
-	sds      map[reflect.Type]*servDescriptor
-	lifetime Lifetime
+	sds map[reflect.Type]*servDescriptor
 }
 
 // newServColl creates a new service collection
-func newServColl(lifetime Lifetime) *servColl {
-	if lifetime == LifetimeTransient {
-		log.Panicf("Can not create transient service collection\n")
-	}
-
+func newServColl() *servColl {
 	return &servColl{
-		sds:      make(map[reflect.Type]*servDescriptor),
-		lifetime: lifetime,
+		sds: make(map[reflect.Type]*servDescriptor),
 	}
 }
 
@@ -88,76 +80,28 @@ func (sc *servColl) getTypVal(typ reflect.Type) reflect.Value {
 		log.Panicf("Could not find service descriptor for generic %v\n", typ)
 	}
 
-	if sd.lifetime == LifetimeScoped && sc.lifetime != LifetimeScoped {
-		log.Panicf("Can not create a scoped service instance for generic %v outside of a scope\n", typ)
-	}
-
-	if sc.lifetime == LifetimeScoped && sd.lifetime != LifetimeScoped {
-		log.Panicf("Can not create a non-scoped service instance for generic %v in a scoped service collection\n", typ)
-	}
-
-	if sc.lifetime == LifetimeSingleton &&
-		sd.lifetime == LifetimeSingleton &&
-		sd.value != nil {
+	if sd.value != nil {
 		return *sd.value
 	}
 
 	deps := sc.resolveSDDeps(sd)
 	val := sd.newVal(deps)
 
-	if sd.lifetime == LifetimeSingleton || sd.lifetime == LifetimeScoped {
-		sd.value = &val
-	}
-
 	return val
-}
-
-// getScopedColl returns new service collection with only scoped service descriptors
-func (sc *servColl) getScopedColl() *servColl {
-	scopedColl := newServColl(LifetimeScoped)
-
-	for _, sd := range sc.sds {
-		if sd.lifetime == LifetimeScoped {
-			scopedColl.addSD(sd)
-		}
-	}
-
-	return scopedColl
 }
 
 // AddService adds a constructor for the provided type
 func AddService[T any](constr any) {
-	AddSingleton[T](constr)
-}
-
-// AddTransient adds a transient constructor for the T type
-func AddTransient[T any](constr any) {
-	AddServiceLifetime[T](constr, LifetimeTransient)
-}
-
-// AddScoped adds a scoped constructor for the T type
-func AddScoped[T any](constr any) {
-	AddServiceLifetime[T](constr, LifetimeScoped)
-}
-
-// AddSingleton adds a singleton constructor for the T type
-func AddSingleton[T any](constr any) {
-	AddServiceLifetime[T](constr, LifetimeSingleton)
-}
-
-// AddServiceLifetime adds a constructor for the T type with the specified lifetime
-func AddServiceLifetime[T any](constr any, lifetime Lifetime) {
 	typ := generic.GetType[T]()
-	AddServiceType(typ, reflect.ValueOf(constr), lifetime)
+	AddServiceType(typ, reflect.ValueOf(constr))
 }
 
-// AddServiceType adds a constructor for the provided type with the specified lifetime
-func AddServiceType(typ reflect.Type, constrVal reflect.Value, lifetime Lifetime) {
+// AddServiceType adds a constructor for the provided type
+func AddServiceType(typ reflect.Type, constrVal reflect.Value) {
 	mustValidateConstrVal(typ, constrVal)
 	sd := &servDescriptor{
-		typ:      typ,
-		constr:   newConstructor(constrVal),
-		lifetime: lifetime,
+		typ:    typ,
+		constr: newConstructor(constrVal),
 	}
 
 	defaultContainer.addSD(sd)
@@ -172,15 +116,4 @@ func GetService[T any]() T {
 // GetServiceByType gets service by the provided type
 func GetServiceByType(typ reflect.Type) reflect.Value {
 	return defaultContainer.getTypVal(typ)
-}
-
-// GetScopedService gets scoped service T in provided scope
-func GetScopedService[T any](scope *Scope) T {
-	typ := generic.GetType[T]()
-	return GetScopedServiceByType(scope, typ).Interface().(T)
-}
-
-// GetScopedServiceByType gets scoped service by the provided type in provided scope
-func GetScopedServiceByType(scope *Scope, typ reflect.Type) reflect.Value {
-	return scope.getTypVal(typ)
 }

@@ -5,6 +5,7 @@
 package config
 
 import (
+	"fmt"
 	"github.com/akimsavvin/gonet/di"
 	"github.com/akimsavvin/gonet/env"
 	"github.com/ilyakaznacheev/cleanenv"
@@ -25,7 +26,6 @@ func buildCfgFileName(typ Type) string {
 	cfgExts := map[Type]string{
 		JSON: "json",
 		YAML: "yaml",
-		ENV:  "env",
 	}
 
 	var cfgNameBuilder strings.Builder
@@ -40,7 +40,7 @@ func buildCfgFileName(typ Type) string {
 	return cfgNameBuilder.String()
 }
 
-func newConfig[T any](typ Type) T {
+func newFileConfig[T any](typ Type) T {
 	fileName := buildCfgFileName(typ)
 
 	if _, err := os.Stat(fileName); os.IsNotExist(err) {
@@ -54,6 +54,27 @@ func newConfig[T any](typ Type) T {
 	}
 
 	return *cfg
+}
+
+func newEnvConfig[T any]() T {
+	cfg := new(T)
+
+	if err := cleanenv.ReadEnv(cfg); err != nil {
+		log.Panicf("Can not parse config due to error: %s\n", err.Error())
+	}
+
+	return *cfg
+}
+
+func newConfig[T any](typ Type) T {
+	switch typ {
+	case JSON, YAML:
+		return newFileConfig[T](JSON)
+	case ENV:
+		return newEnvConfig[T]()
+	default:
+		panic(fmt.Sprintf("Unkown config type: %d\n", typ))
+	}
 }
 
 func Add[T any](cfgTyp Type) {
