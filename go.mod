@@ -4,7 +4,7 @@
 
 module github.com/akimsavvin/gonet
 
-go 1.22.0
+go 1.20.0
 
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
@@ -14,6 +14,7 @@ require (
 require (
 	github.com/BurntSushi/toml v1.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

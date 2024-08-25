@@ -6,6 +6,10 @@ package generic
 
 import "reflect"
 
-func GetType[T any]() reflect.Type {
-	return reflect.TypeOf(new(T)).Elem()
+func Default[T any]() T {
+	return *new(T)
+}
+
+func TypeOf[T any]() reflect.Type {
+	return reflect.TypeOf((*T)(nil)).Elem()
 }
