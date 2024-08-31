@@ -11,31 +11,45 @@ import (
 	"sync/atomic"
 )
 
-// ServiceLifetime lifetime of a service
-type ServiceLifetime int
+// ServiceCollection is a collection of service descriptors
+type ServiceCollection interface {
+	// AddService adds a service descriptor to the collection for the provided type
+	// the second argument must be either a factory creating a service instance or an instance itself
+	AddService(typ reflect.Type, factoryOrInstance any)
 
-const (
-	// LifetimeTransient is created every time it is requested
-	LifetimeTransient ServiceLifetime = iota
+	// AddKeyedService adds a service descriptor to the collection for the provided type and key
+	// the third argument must be either a factory creating a service instance or an instance itself
+	AddKeyedService(typ reflect.Type, key string, factoryOrInstance any)
 
-	// LifetimeScoped service is created once for a scope and re-used every time it is requested in the scope
-	LifetimeScoped
-
-	// LifetimeSingleton service is created only once and then re-used every time it is requested
-	LifetimeSingleton
-)
-
-// ServiceFactory is a service factory function description
-type ServiceFactory struct {
-	Type       reflect.Type
-	Value      reflect.Value
-	DepsCount  int
-	ReturnType reflect.Type
-	HasErr     bool
+	// descriptors returns a slice of added service descriptors
+	descriptors() []*serviceDescriptor
 }
 
-// NewServiceFactory creates a new ServiceFactory for the provided factory function
-func NewServiceFactory(factory any) *ServiceFactory {
+type (
+	// serviceFactoryValue is a serviceFactory.Value
+	serviceFactoryValue reflect.Value
+
+	// serviceFactory is a service factory function description
+	serviceFactory struct {
+		// Type is factory type
+		Type reflect.Type
+
+		// Value is factory value
+		Value serviceFactoryValue
+
+		// DepsCount is number of the factory dependencies
+		DepsCount int
+
+		// ReturnType is the return type of the factory function
+		ReturnType reflect.Type
+
+		// HasErr is true if the factory returns an error as the second return argument
+		HasErr bool
+	}
+)
+
+// newServiceFactory creates a new serviceFactory for the provided factory function
+func newServiceFactory(factory any) *serviceFactory {
 	val := reflect.ValueOf(factory)
 	typ := val.Type()
 
@@ -56,165 +70,124 @@ func NewServiceFactory(factory any) *ServiceFactory {
 		log.Panicf("[%t]: service factory returns too many values\n", factory)
 	}
 
-	return &ServiceFactory{
+	return &serviceFactory{
 		Type:       typ,
-		Value:      val,
+		Value:      serviceFactoryValue(val),
 		DepsCount:  typ.NumIn(),
 		ReturnType: typ.Out(0),
 		HasErr:     numOut == 2,
 	}
 }
 
-// ServiceDescriptor describes a service in the service collection
-type ServiceDescriptor struct {
+// serviceDescriptor describes a service in the service collection
+type serviceDescriptor struct {
 	Type               reflect.Type
 	Key                string
 	ImplementationType reflect.Type
 	Instance           *reflect.Value
-	Factory            *ServiceFactory
-	Lifetime           ServiceLifetime
+	Factory            *serviceFactory
 }
 
-// ServiceCollection contains a list of service descriptors
-type ServiceCollection struct {
-	Descriptors []*ServiceDescriptor
+// serviceCollection contains a list of service descriptors
+type serviceCollection struct {
+	Descriptors []*serviceDescriptor
 }
 
-// NewServiceCollection creates a new ServiceCollection
-func NewServiceCollection() *ServiceCollection {
-	return &ServiceCollection{
-		Descriptors: make([]*ServiceDescriptor, 0),
+// newServiceCollection creates a new serviceCollection
+func newServiceCollection() *serviceCollection {
+	return &serviceCollection{
+		Descriptors: make([]*serviceDescriptor, 0),
 	}
 }
 
-// AddService adds a new service to the service collection with the provided lifetime
-// Either factory or instance must be provided if there are both, the factory will be ignored
-// instance can be provided only for singleton services
-func (coll *ServiceCollection) AddService(typ reflect.Type, factory, instance any, lifetime ServiceLifetime) {
-	coll.AddKeyedService(typ, "", factory, instance, lifetime)
+// AddService adds a new service to the service collection
+func (coll *serviceCollection) AddService(typ reflect.Type, factoryOrInstance any) {
+	coll.AddKeyedService(typ, "", factoryOrInstance)
 }
 
-// AddKeyedService adds a new keyed service to the service collection with the provided lifetime
-// Either factory or instance must be provided if there are both, the factory will be ignored
-// instance can be provided only for singleton services
-func (coll *ServiceCollection) AddKeyedService(typ reflect.Type, key string, factory, instance any, lifetime ServiceLifetime) {
-	sd := &ServiceDescriptor{
-		Type:     typ,
-		Key:      key,
-		Lifetime: lifetime,
+// AddKeyedService adds a new keyed service to the service collection
+func (coll *serviceCollection) AddKeyedService(typ reflect.Type, key string, factoryOrInstance any) {
+	if reflect.TypeOf(factoryOrInstance).Kind() == reflect.Func {
+		coll.AddKeyedServiceFactory(typ, key, factoryOrInstance)
+	} else {
+		coll.AddKeyedServiceInstance(typ, key, factoryOrInstance)
+	}
+}
+
+// AddServiceFactory adds a new service with a factory to the service collection
+func (coll *serviceCollection) AddServiceFactory(typ reflect.Type, factory any) {
+	coll.AddKeyedServiceFactory(typ, "", factory)
+}
+
+// AddKeyedServiceFactory adds a new keyed service with a factory to the service collection
+func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key string, factory any) {
+	sd := &serviceDescriptor{
+		Type: typ,
+		Key:  key,
 	}
 
-	switch {
-	case instance != nil:
-		if lifetime != LifetimeSingleton {
-			log.Panicf("[%v, %t]: non singleton service can not be initialized with instance\n", typ, instance)
-		}
+	f := newServiceFactory(factory)
 
-		instVal := reflect.ValueOf(instance)
-		instTyp := instVal.Type()
-
-		if !instTyp.AssignableTo(typ) {
-			log.Panicf("[%v, %t]: service instance must be assignable to service type\n", typ, instance)
-		}
-
-		sd.Instance = &instVal
-		sd.ImplementationType = instTyp
-	case factory != nil:
-		f := NewServiceFactory(factory)
-
-		if !f.ReturnType.AssignableTo(typ) {
-			log.Panicf("[%v, %v]: service factory return type must be assignable to service type\n",
-				typ, reflect.TypeOf(factory))
-		}
-
-		sd.Factory = f
-		sd.ImplementationType = f.ReturnType
-	default:
-		log.Panicf("[%v]: no factory or instance provided\n", typ)
+	if !f.ReturnType.AssignableTo(typ) {
+		log.Panicf("[%v, %v]: service factory return type must be assignable to service type\n",
+			typ, reflect.TypeOf(factory))
 	}
+
+	sd.Factory = f
+	sd.ImplementationType = f.ReturnType
 
 	coll.Descriptors = append(coll.Descriptors, sd)
 }
 
-// AddSingleton adds a new singleton service to the service collection with the provided factory or instance
-func (coll *ServiceCollection) AddSingleton(typ reflect.Type, factoryOrInstance any) {
-	coll.AddKeyedSingleton(typ, "", factoryOrInstance)
+// AddServiceInstance adds a new service with an instance to the service collection
+func (coll *serviceCollection) AddServiceInstance(typ reflect.Type, instance any) {
+	coll.AddKeyedServiceInstance(typ, "", instance)
 }
 
-// AddKeyedSingleton adds a new keyed singleton service to the service collection with the provided factory or instance
-func (coll *ServiceCollection) AddKeyedSingleton(typ reflect.Type, key string, factoryOrInstance any) {
-	if reflect.TypeOf(factoryOrInstance).Kind() == reflect.Func {
-		coll.AddKeyedService(typ, key, factoryOrInstance, nil, LifetimeSingleton)
-	} else {
-		coll.AddKeyedService(typ, key, nil, factoryOrInstance, LifetimeSingleton)
-	}
-}
-
-// AddScoped adds a new scoped service to the service collection with the provided factory
-func (coll *ServiceCollection) AddScoped(typ reflect.Type, factory any) {
-	coll.AddService(typ, factory, nil, LifetimeScoped)
-}
-
-// AddKeyedScoped adds a new keyed scoped service to the service collection with the provided factory
-func (coll *ServiceCollection) AddKeyedScoped(typ reflect.Type, key string, factory any) {
-	coll.AddKeyedService(typ, key, factory, nil, LifetimeScoped)
-}
-
-// AddTransient adds a new transient service to the service collection with the provided factory
-func (coll *ServiceCollection) AddTransient(typ reflect.Type, factory any) {
-	coll.AddService(typ, factory, nil, LifetimeTransient)
-}
-
-// AddKeyedTransient adds a new keyed transient service to the service collection with the provided factory
-func (coll *ServiceCollection) AddKeyedTransient(typ reflect.Type, key string, factory any) {
-	coll.AddKeyedService(typ, key, factory, nil, LifetimeTransient)
-}
-
-// serviceCollectionInstance the instance of the service collection created with Init function
-var serviceCollectionInstance atomic.Pointer[ServiceCollection]
-
-// MustGetServiceCollection returns the default instance of the service collection
-// panics if the service collection is not initialized
-func MustGetServiceCollection() *ServiceCollection {
-	serviceCollection := serviceCollectionInstance.Load()
-	if serviceCollection == nil {
-		log.Panicln("service collection instance is not initialized")
+// AddKeyedServiceInstance adds a new keyed service with an instance to the service collection
+func (coll *serviceCollection) AddKeyedServiceInstance(typ reflect.Type, key string, instance any) {
+	sd := &serviceDescriptor{
+		Type: typ,
+		Key:  key,
 	}
 
-	return serviceCollection
+	instVal := reflect.ValueOf(instance)
+	instTyp := instVal.Type()
+
+	if !instTyp.AssignableTo(typ) {
+		log.Panicf("[%v, %t]: service instance must be assignable to service type\n", typ, instance)
+	}
+
+	sd.Instance = &instVal
+	sd.ImplementationType = instTyp
+
+	coll.Descriptors = append(coll.Descriptors, sd)
+}
+
+// descriptors returns a slice of added service descriptors
+func (coll *serviceCollection) descriptors() []*serviceDescriptor {
+	return coll.Descriptors
+}
+
+// serviceCollectionInstance the instance of the service collection created with init function
+var serviceCollectionInstance atomic.Pointer[serviceCollection]
+
+// GetServiceCollection returns an instance of ServiceCollection
+func GetServiceCollection() ServiceCollection {
+	return serviceCollectionInstance.Load()
 }
 
 // init creates a new default service collection instance
 func init() {
-	serviceCollectionInstance.Store(NewServiceCollection())
+	serviceCollectionInstance.Store(newServiceCollection())
 }
 
-// AddSingleton adds a new singleton service to the default service collection with the provided factory or instance
-func AddSingleton[T any](factoryOrValue any) {
-	MustGetServiceCollection().AddSingleton(generic.TypeOf[T](), factoryOrValue)
+// AddService adds a new singleton service to the default service collection with the provided factory or instance
+func AddService[T any](factoryOrValue any) {
+	GetServiceCollection().AddService(generic.TypeOf[T](), factoryOrValue)
 }
 
-// AddKeyedSingleton adds a new keyed singleton service to the default service collection with the provided factory or instance
-func AddKeyedSingleton[T any](key string, factoryOrValue any) {
-	MustGetServiceCollection().AddKeyedSingleton(generic.TypeOf[T](), key, factoryOrValue)
-}
-
-// AddScoped adds a new scoped service to the default service collection with the provided factory
-func AddScoped[T any](factory any) {
-	MustGetServiceCollection().AddScoped(generic.TypeOf[T](), factory)
-}
-
-// AddKeyedScoped adds a new keyed scoped service to the default service collection with the provided factory
-func AddKeyedScoped[T any](key string, factory any) {
-	MustGetServiceCollection().AddKeyedScoped(generic.TypeOf[T](), key, factory)
-}
-
-// AddTransient adds a new transient service to the default service collection with the provided factory
-func AddTransient[T any](factory any) {
-	MustGetServiceCollection().AddTransient(generic.TypeOf[T](), factory)
-}
-
-// AddKeyedTransient adds a new keyed transient service to the default service collection with the provided factory
-func AddKeyedTransient[T any](key string, factory any) {
-	MustGetServiceCollection().AddKeyedTransient(generic.TypeOf[T](), key, factory)
+// AddKeyedService adds a new keyed singleton service to the default service collection with the provided factory or instance
+func AddKeyedService[T any](key string, factoryOrValue any) {
+	GetServiceCollection().AddKeyedService(generic.TypeOf[T](), key, factoryOrValue)
 }
