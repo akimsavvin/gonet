@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
+// ShutdownFunc describes a callback function that will be invoked on shutdown
 type ShutdownFunc = func(ctx context.Context)
 
-// OnShutdown block invoking goroutine and wait for SIGINT syscall to invoke a callback
+// OnShutdown block invoking goroutine and wait for os.Interrupt or os.Kill signals to invoke a callback
 func OnShutdown(callback ShutdownFunc) {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, os.Kill)
