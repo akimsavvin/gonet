@@ -1,15 +1,18 @@
 # GoNet framework
-___
-GoNet is the first Golang framework with generic-based dependency injection, advanced routing, gRPC, kafka and
-websockets support and an extensive collection of other tools.
 
-*GoNet is inspired by the .NET and NestJS frameworks, so it may look a bit similar to them*
+___
+
+- 🔥 GoNet is the first full-fledged framework made for Golang!
+- ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
+- 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
+
+___
 
 ## Getting started
 
 ### Prerequisites
 
-- **[Go](https://go.dev/)**: version 1.22.0 or higher (we use it innovations).
+- **[Go](https://go.dev/)**: version 1.20.0 or higher.
 
 ### Getting GoNet
 
@@ -29,118 +32,167 @@ $ go get -u github.com/akimsavvin/gonet
 
 ## Dependency injection
 
-GoNet provides advanced DI tools.
+GoNet provides advanced tools to deal with dependency injection.
 
 ### Example
 
 1. Declare a service and define a constructor which has all required dependencies in its parameters
 
 ```go
-package services
+package greeter
 
 import (
 	"fmt"
 )
 
-type Multiplier interface {
-	Multiply(x, y int) int
+type UserRepo interface {
+	GetNameByID(id int) string
 }
 
-type UserService struct {
-	m Multiplier
+type Greeter struct {
+	repo UserRepo
 }
 
-func NewUserService(m Multiplier) *UserService {
-	return &UserService{
-		m: m,
+func New(repo UserRepo) *Greeter {
+	return &Greeter{
+		repo: repo,
 	}
 }
 
-func (s *UserService) LogSquared(x int) {
-	fmt.Println(s.m.Multiply(x, x))
+func (g *Greeter) GreetByID(id int) {
+	fmt.Printf("Hello, %s!\n", g.repo.GetNameByID(id))
 }
 ```
 
-2. Create a provider for the needed service (_Multiplier in this case_)
+2. Create a service for the **UserRepo**
 
 ```go
-package util
+package storage
 
-type Multiplier struct{}
-
-func NewMultiplier() *Multiplier {
-	return &Multiplier{}
+type UserRepo struct {
+	data map[int]string
 }
 
-func (m *Multiplier) Multiply(x, y int) int {
-	return x * y
+func NewUserRepo() *UserRepo {
+	return &UserRepo{
+       data: map[int]string{
+		   17: "Akim",
+       },
+    }
 }
-```
 
-3. Now you can register services and the GoNet will panic if any service does not implement provided type
-
-```go
-package main
-
-import (
-	"github.com/akimsavvin/gonet/di"
-	"services"
-	"util"
-)
-
-func main() {
-	di.AddService[services.Multiplier](util.NewMultiplier)
-	di.AddService[services.UserService](services.NewUserService)
+func (repo *UserRepo) GetNameByID(id int) string {
+	return repo.data[id]
 }
 ```
 
-3. Now you can get your service as follows
+3. Now you can add your services to the default collection
 
 ```go
 package main
 
 import (
 	"github.com/akimsavvin/gonet/di"
-	"services"
-	"util"
+	"greeter"
+	"storage"
 )
 
 func main() {
-	di.AddService[*services.Multiplier](util.NewMultiplier)
-	di.AddService[*services.UserService](services.NewUserService)
-
-	service := di.GetService[*services.UserService]()
-	service.LogSquared(4) // 16
-	service.LogSquared(8) // 64
+	di.AddService[greeter.UserRepo](storage.NewUserRepo)
+	di.AddService[*greeter.Greeter](greeter.New)
 }
 ```
+
+3. Now you must build the service provider and you can get your service as follows
+
+```go
+package main
+
+import (
+	"github.com/akimsavvin/gonet/di"
+	"greeter"
+	"storage"
+)
+
+func main() {
+	di.AddService[greeter.UserRepo](storage.NewUserRepo)
+	di.AddService[*greeter.Greeter](greeter.New)
+
+	// Build function build the service provider instance (and check the services dependencies if the future),  
+	// which is then used to get services
+	di.Build()
+
+	service := di.GetRequiredService[*greeter.Greeter]()
+	service.Greet(17) // Hello, Akim!
+}
+```
+
+## Environment
+
+GoNet provides the tools to interact with the ENVIRONMENT variable with the **env** package.
+
+### Examples
 
 ```go
 package main
 
 import (
 	"fmt"
-	"github.com/akimsavvin/gonet/di"
+	"github.com/akimsavvin/gonet/env"
+	"os"
 )
 
-type MyService struct{}
+func main() {
+	os.Setenv("ENVIRONMENT", "Staging")
 
-func (s *MyService) Do() {...}
+	curEnv, ok := env.Current()
+	fmt.Println(ok) // true
+	fmt.Println(curEnv == env.Staging) // true
 
-func NewMyService() *MyService {
-	fmt.Println("Created new MyService instance")
-	return new(MyService)
+	os.Clearenv()
+
+	curEnv, ok = env.Current()
+	fmt.Println(ok) // false
+	fmt.Println(curEnv == "") // true
+
+	curEnv = env.CurrentOrDefault()
+	fmt.Println(curEnv == env.Development) // true
+	
+	os.Setenv("ENVIRONMENT", "Production")
+
+	curEnv = env.CurrentOrDefault()
+	fmt.Println(curEnv == env.Production) // true
 }
+```
+
+## Graceful shutdown
+
+GoNet provides the tools to deal with graceful shutdown with **graceful** package.
+
+### Example
+
+```go
+package main
+
+import (
+	"app"
+	"context"
+	"fmt"
+	"github.com/akimsavvin/gonet/graceful"
+)
 
 func main() {
-	di.AddTransient[*MyService](NewMyService)
+	// ctx will be cancelled on os.Interrupt or os.Kill
+	ctx, cancel := graceful.Context()
+	defer cancel()
 
-	// Creates a new MyService instance
-	serv := di.GetService[*MyService]() // Created new MyService instance
-	serv.Do()
-	serv2 := di.GetService[*MyService]() // Returns an existing instance
-	serv2.Do()
+	app.Start(ctx, ...)
 
-	fmt.Println(serv == serv2) // false
+	// current goroutine will be blocked
+	// and provided function will be invoked on os.Interrupt or os.Kill
+	graceful.OnShutdown(func() {
+		app.Stop()
+		println("application stopped")
+	})
 }
 ```
