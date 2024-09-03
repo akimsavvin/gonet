@@ -8,6 +8,7 @@ import (
 	"github.com/akimsavvin/gonet/generic"
 	"log"
 	"reflect"
+	"sync"
 	"sync/atomic"
 )
 
@@ -90,14 +91,15 @@ type serviceDescriptor struct {
 
 // serviceCollection contains a list of service descriptors
 type serviceCollection struct {
+	// Descriptors is a slice of service descriptors added to the collection
 	Descriptors []*serviceDescriptor
+	// mx is a mutex to protect the Descriptors
+	mx sync.RWMutex
 }
 
 // newServiceCollection creates a new serviceCollection
 func newServiceCollection() *serviceCollection {
-	return &serviceCollection{
-		Descriptors: make([]*serviceDescriptor, 0),
-	}
+	return &serviceCollection{}
 }
 
 // AddService adds a new service to the service collection
@@ -136,7 +138,9 @@ func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key stri
 	sd.Factory = f
 	sd.ImplementationType = f.ReturnType
 
+	coll.mx.Lock()
 	coll.Descriptors = append(coll.Descriptors, sd)
+	coll.mx.Unlock()
 }
 
 // AddServiceInstance adds a new service with an instance to the service collection
@@ -161,12 +165,20 @@ func (coll *serviceCollection) AddKeyedServiceInstance(typ reflect.Type, key str
 	sd.Instance = &instVal
 	sd.ImplementationType = instTyp
 
+	coll.mx.Lock()
 	coll.Descriptors = append(coll.Descriptors, sd)
+	coll.mx.Unlock()
 }
 
 // descriptors returns a slice of added service descriptors
 func (coll *serviceCollection) descriptors() []*serviceDescriptor {
-	return coll.Descriptors
+	coll.mx.RLock()
+	defer coll.mx.RUnlock()
+
+	descriptors := make([]*serviceDescriptor, 0, len(coll.Descriptors))
+	copy(descriptors, coll.Descriptors)
+
+	return descriptors
 }
 
 // serviceCollectionInstance the instance of the service collection created with init function

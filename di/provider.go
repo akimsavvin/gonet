@@ -9,6 +9,7 @@ import (
 	"log"
 	"reflect"
 	"slices"
+	"sync"
 	"sync/atomic"
 )
 
@@ -175,9 +176,13 @@ func (sp *serviceProvider) ResolveFactoryDeps(factory *serviceFactory) []reflect
 }
 
 // GetServiceInstance gets a descriptor's existing service instance or creates a new one
-func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) reflect.Value {
-	if instance, ok := sp.FactoryInstances[descriptor.Factory.Value]; ok {
-		return instance
+func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (instance reflect.Value) {
+	sp.mx.RLock()
+	instance, ok := sp.FactoryInstances[descriptor.Factory.Value]
+	sp.mx.RUnlock()
+
+	if ok {
+		return
 	}
 
 	deps := sp.ResolveFactoryDeps(descriptor.Factory)
@@ -187,10 +192,13 @@ func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) ref
 			descriptor.ImplementationType, values[1].Interface().(error).Error())
 	}
 
-	instance := values[0]
-	sp.FactoryInstances[descriptor.Factory.Value] = instance
+	instance = values[0]
 
-	return instance
+	sp.mx.Lock()
+	sp.FactoryInstances[descriptor.Factory.Value] = instance
+	sp.mx.Unlock()
+
+	return
 }
 
 // serviceProvider implements the ServiceProvider interface
@@ -201,6 +209,8 @@ type serviceProvider struct {
 	// FactoryInstances is a map where the key is a serviceFactoryValue
 	// and the value is factory return value instance
 	FactoryInstances map[serviceFactoryValue]reflect.Value
+	// mx is a mutex to protect the FactoryInstances
+	mx sync.RWMutex
 }
 
 // newServiceProvider creates a new serviceProvider
@@ -213,7 +223,7 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 			Key:  descriptor.Key,
 		}
 
-		if accessors[id] == nil {
+		if _, ok := accessors[id]; !ok {
 			accessors[id] = newServiceAccessorsList()
 		}
 
@@ -248,7 +258,7 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 			res.Index(i).Set(instance)
 		}
 
-		return res, ok
+		return res, true
 	}
 
 	accessor := accessors.Last()
