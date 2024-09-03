@@ -5,8 +5,9 @@
 package main
 
 import (
-	"fmt"
 	"github.com/akimsavvin/gonet/di"
+	"io"
+	"log"
 )
 
 type MyInterface interface {
@@ -65,13 +66,35 @@ type Huy struct {
 	Hello string
 }
 
+type MyReadCloser struct {
+}
+
+func NewMyReadCloser() *MyReadCloser {
+	log.Println("NewMyReadCloser")
+	mrc := new(MyReadCloser)
+	var _ io.Reader = mrc
+	var _ io.Closer = mrc
+	return mrc
+}
+
+func (m *MyReadCloser) Read(p []byte) (n int, err error) {
+	log.Println("Read")
+	return
+}
+
+func (m *MyReadCloser) Close() (err error) {
+	log.Println("Close")
+	return
+}
+
 func main() {
-	di.AddSingleton[MyInterface](NewMyClass)
-	di.AddSingleton[MyInterface](NewMyClass2)
-	di.AddTransient[HerInterface](NewHerService)
+	di.AddService[io.Reader](NewMyReadCloser)
+	di.AddService[io.Closer](NewMyReadCloser)
 
 	di.Build()
 
-	her := di.GetRequiredService[HerInterface]()
-	fmt.Println(her.Huynya())
+	r := di.GetRequiredService[io.Reader]()
+	c := di.GetRequiredService[io.Closer]()
+	r.Read(nil)
+	c.Close()
 }
