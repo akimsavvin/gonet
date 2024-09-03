@@ -127,3 +127,72 @@ func main() {
 }
 ```
 
+## Environment
+
+GoNet provides the tools to interact with the ENVIRONMENT variable with the **env** package.
+
+### Examples
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/akimsavvin/gonet/env"
+	"os"
+)
+
+func main() {
+	os.Setenv("ENVIRONMENT", "Staging")
+
+	curEnv, ok := env.Current()
+	fmt.Println(ok) // true
+	fmt.Println(curEnv == env.Staging) // true
+
+	os.Clearenv()
+
+	curEnv, ok = env.Current()
+	fmt.Println(ok) // false
+	fmt.Println(curEnv == "") // true
+
+	curEnv = env.CurrentOrDefault()
+	fmt.Println(curEnv == env.Development) // true
+	
+	os.Setenv("ENVIRONMENT", "Production")
+
+	curEnv = env.CurrentOrDefault()
+	fmt.Println(curEnv == env.Production) // true
+}
+```
+
+## Graceful shutdown
+
+GoNet provides the tools to deal with graceful shutdown with **graceful** package.
+
+### Example
+
+```go
+package main
+
+import (
+	"app"
+	"context"
+	"fmt"
+	"github.com/akimsavvin/gonet/graceful"
+)
+
+func main() {
+	// ctx will be cancelled on os.Interrupt or os.Kill
+	ctx, cancel := graceful.Context()
+	defer cancel()
+
+	app.Start(ctx, ...)
+
+	// current goroutine will be blocked
+	// and provided function will be invoked on os.Interrupt or os.Kill
+	graceful.OnShutdown(func() {
+		app.Stop()
+		println("application stopped")
+	})
+}
+```
