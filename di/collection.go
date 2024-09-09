@@ -79,11 +79,20 @@ func newServiceFactory(factory any) *serviceFactory {
 
 // serviceDescriptor describes a service in the service collection
 type serviceDescriptor struct {
-	Type               reflect.Type
-	Key                string
+	// Type is the service type
+	Type reflect.Type
+
+	// Key is the service key
+	Key string
+
+	// ImplementationType is the service implementation type
 	ImplementationType reflect.Type
-	Instance           *reflect.Value
-	Factory            *serviceFactory
+
+	// Implementation is the optional service implementation instance
+	Instance *reflect.Value
+
+	// Factory is service serviceFactory
+	Factory *serviceFactory
 }
 
 // serviceCollection contains a list of service descriptors
