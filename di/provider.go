@@ -178,7 +178,7 @@ func (sp *serviceProvider) ResolveFactoryDeps(factory *serviceFactory) []reflect
 // GetServiceInstance gets a descriptor's existing service instance or creates a new one
 func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (instance reflect.Value) {
 	sp.mx.RLock()
-	instance, ok := sp.FactoryInstances[descriptor.Factory.Value]
+	instance, ok := sp.Instances[descriptor]
 	sp.mx.RUnlock()
 
 	if ok {
@@ -186,7 +186,7 @@ func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (in
 	}
 
 	deps := sp.ResolveFactoryDeps(descriptor.Factory)
-	values := reflect.Value(descriptor.Factory.Value).Call(deps)
+	values := descriptor.Factory.Value.Call(deps)
 	if descriptor.Factory.HasErr && !values[1].IsNil() {
 		log.Panicf("[%v]: could not create a service instance due to error: %s\n",
 			descriptor.ImplementationType, values[1].Interface().(error).Error())
@@ -195,7 +195,7 @@ func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (in
 	instance = values[0]
 
 	sp.mx.Lock()
-	sp.FactoryInstances[descriptor.Factory.Value] = instance
+	sp.Instances[descriptor] = instance
 	sp.mx.Unlock()
 
 	return
@@ -206,10 +206,10 @@ type serviceProvider struct {
 	// Accessors is a map for service identifiers of service descriptors lists
 	Accessors serviceAccessors
 
-	// FactoryInstances is a map where the key is a serviceFactoryValue
-	// and the value is factory return value instance
-	FactoryInstances map[serviceFactoryValue]reflect.Value
-	// mx is a mutex to protect the FactoryInstances
+	// Instances is a map where the key is a serviceDescriptor
+	// and the value is the descriptor's service instance
+	Instances map[*serviceDescriptor]reflect.Value
+	// mx is a mutex to protect the Instances
 	mx sync.RWMutex
 }
 
@@ -232,8 +232,8 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 	}
 
 	return &serviceProvider{
-		Accessors:        accessors,
-		FactoryInstances: make(map[serviceFactoryValue]reflect.Value),
+		Accessors: accessors,
+		Instances: make(map[*serviceDescriptor]reflect.Value),
 	}
 }
 
