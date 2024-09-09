@@ -113,11 +113,6 @@ func (coll *serviceCollection) AddKeyedService(typ reflect.Type, key string, fac
 	}
 }
 
-// AddServiceFactory adds a new service with a factory to the service collection
-func (coll *serviceCollection) AddServiceFactory(typ reflect.Type, factory any) {
-	coll.AddKeyedServiceFactory(typ, "", factory)
-}
-
 // AddKeyedServiceFactory adds a new keyed service with a factory to the service collection
 func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key string, factory any) {
 	sd := &serviceDescriptor{
@@ -136,11 +131,6 @@ func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key stri
 	sd.ImplementationType = f.ReturnType
 
 	coll.AddDescriptor(sd)
-}
-
-// AddServiceInstance adds a new service with an instance to the service collection
-func (coll *serviceCollection) AddServiceInstance(typ reflect.Type, instance any) {
-	coll.AddKeyedServiceInstance(typ, "", instance)
 }
 
 // AddKeyedServiceInstance adds a new keyed service with an instance to the service collection
