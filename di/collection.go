@@ -27,16 +27,13 @@ type ServiceCollection interface {
 }
 
 type (
-	// serviceFactoryValue is a serviceFactory.Value
-	serviceFactoryValue reflect.Value
-
 	// serviceFactory is a service factory function description
 	serviceFactory struct {
 		// Type is factory type
 		Type reflect.Type
 
 		// Value is factory value
-		Value serviceFactoryValue
+		Value reflect.Value
 
 		// DepsCount is number of the factory dependencies
 		DepsCount int
@@ -73,7 +70,7 @@ func newServiceFactory(factory any) *serviceFactory {
 
 	return &serviceFactory{
 		Type:       typ,
-		Value:      serviceFactoryValue(val),
+		Value:      val,
 		DepsCount:  typ.NumIn(),
 		ReturnType: typ.Out(0),
 		HasErr:     numOut == 2,
@@ -138,9 +135,7 @@ func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key stri
 	sd.Factory = f
 	sd.ImplementationType = f.ReturnType
 
-	coll.mx.Lock()
-	coll.Descriptors = append(coll.Descriptors, sd)
-	coll.mx.Unlock()
+	coll.AddDescriptor(sd)
 }
 
 // AddServiceInstance adds a new service with an instance to the service collection
@@ -165,6 +160,11 @@ func (coll *serviceCollection) AddKeyedServiceInstance(typ reflect.Type, key str
 	sd.Instance = &instVal
 	sd.ImplementationType = instTyp
 
+	coll.AddDescriptor(sd)
+}
+
+// AddDescriptor adds a new service descriptor to the service collection
+func (coll *serviceCollection) AddDescriptor(sd *serviceDescriptor) {
 	coll.mx.Lock()
 	coll.Descriptors = append(coll.Descriptors, sd)
 	coll.mx.Unlock()
