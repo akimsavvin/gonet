@@ -150,8 +150,12 @@ type serviceIdentifier struct {
 	// Type is the service type
 	Type reflect.Type
 
-	// Key is the service key
+	// Key is the service key.
+	// Empty if the service is not keyed
 	Key string
+
+	// HasKey is true if the service is keyed
+	HasKey bool
 }
 
 // ResolveFactoryDeps returns a slice of service dependencies for the provided factory
@@ -219,8 +223,9 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 
 	for _, descriptor := range serviceDescriptors {
 		id := serviceIdentifier{
-			Type: descriptor.Type,
-			Key:  descriptor.Key,
+			Type:   descriptor.Type,
+			Key:    descriptor.Key,
+			HasKey: descriptor.HasKey,
 		}
 
 		if _, ok := accessors[id]; !ok {
@@ -267,12 +272,13 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 
 // GetService gets an instance for the provided service type
 func (sp *serviceProvider) GetService(typ reflect.Type) (reflect.Value, bool) {
-	return sp.GetKeyedService(typ, "")
+	id := serviceIdentifier{typ, "", false}
+	return sp.GetServiceID(id)
 }
 
 // GetKeyedService gets an instance for the provided service type and key
 func (sp *serviceProvider) GetKeyedService(typ reflect.Type, key string) (reflect.Value, bool) {
-	id := serviceIdentifier{typ, key}
+	id := serviceIdentifier{typ, key, true}
 	return sp.GetServiceID(id)
 }
 
@@ -331,14 +337,14 @@ func AssertRequiredService[T any](service reflect.Value) T {
 
 // GetService returns an asserted service instance from the default serviceProvider instance
 func GetService[T any]() (T, bool) {
-	service, ok := GetServiceProvider().GetService(generic.TypeOf[T]())
-	return AssertService[T](service, ok)
+	return AssertService[T](GetServiceProvider().
+		GetService(generic.TypeOf[T]()))
 }
 
 // GetKeyedService returns an asserted keyed service instance from the default serviceProvider instance
 func GetKeyedService[T any](key string) (T, bool) {
-	service, ok := GetServiceProvider().GetKeyedService(generic.TypeOf[T](), key)
-	return AssertService[T](service, ok)
+	return AssertService[T](GetServiceProvider().
+		GetKeyedService(generic.TypeOf[T](), key))
 }
 
 // GetRequiredService returns an asserted required service instance from the default serviceProvider instance
