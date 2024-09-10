@@ -82,7 +82,11 @@ type serviceDescriptor struct {
 	// Type is the service type
 	Type reflect.Type
 
-	// Key is the service key
+	// HasKey is true if the service is keyed
+	HasKey bool
+
+	// Key is the service key.
+	// Empty if the service is not keyed
 	Key string
 
 	// ImplementationType is the service implementation type
@@ -110,23 +114,32 @@ func newServiceCollection() *serviceCollection {
 
 // AddService adds a new service to the service collection
 func (coll *serviceCollection) AddService(typ reflect.Type, factoryOrInstance any) {
-	coll.AddKeyedService(typ, "", factoryOrInstance)
+	coll.AddServiceKey(typ, nil, factoryOrInstance)
 }
 
 // AddKeyedService adds a new keyed service to the service collection
 func (coll *serviceCollection) AddKeyedService(typ reflect.Type, key string, factoryOrInstance any) {
+	coll.AddServiceKey(typ, &key, factoryOrInstance)
+}
+
+// AddServiceKey adds service to the service collection with the provided key
+func (coll *serviceCollection) AddServiceKey(typ reflect.Type, key *string, factoryOrInstance any) {
 	if reflect.TypeOf(factoryOrInstance).Kind() == reflect.Func {
-		coll.AddKeyedServiceFactory(typ, key, factoryOrInstance)
+		coll.AddServiceFactory(typ, key, factoryOrInstance)
 	} else {
-		coll.AddKeyedServiceInstance(typ, key, factoryOrInstance)
+		coll.AddServiceInstance(typ, key, factoryOrInstance)
 	}
 }
 
-// AddKeyedServiceFactory adds a new keyed service with a factory to the service collection
-func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key string, factory any) {
+// AddServiceFactory adds a new keyed service with a factory to the service collection
+func (coll *serviceCollection) AddServiceFactory(typ reflect.Type, key *string, factory any) {
 	sd := &serviceDescriptor{
-		Type: typ,
-		Key:  key,
+		Type:   typ,
+		HasKey: key != nil,
+	}
+
+	if sd.HasKey {
+		sd.Key = *key
 	}
 
 	f := newServiceFactory(factory)
@@ -142,11 +155,15 @@ func (coll *serviceCollection) AddKeyedServiceFactory(typ reflect.Type, key stri
 	coll.AddDescriptor(sd)
 }
 
-// AddKeyedServiceInstance adds a new keyed service with an instance to the service collection
-func (coll *serviceCollection) AddKeyedServiceInstance(typ reflect.Type, key string, instance any) {
+// AddServiceInstance adds a new keyed service with an instance to the service collection
+func (coll *serviceCollection) AddServiceInstance(typ reflect.Type, key *string, instance any) {
 	sd := &serviceDescriptor{
-		Type: typ,
-		Key:  key,
+		Type:   typ,
+		HasKey: key != nil,
+	}
+
+	if sd.HasKey {
+		sd.Key = *key
 	}
 
 	instVal := reflect.ValueOf(instance)
@@ -165,8 +182,8 @@ func (coll *serviceCollection) AddKeyedServiceInstance(typ reflect.Type, key str
 // AddDescriptor adds a new service descriptor to the service collection
 func (coll *serviceCollection) AddDescriptor(sd *serviceDescriptor) {
 	coll.mx.Lock()
+	defer coll.mx.Unlock()
 	coll.Descriptors = append(coll.Descriptors, sd)
-	coll.mx.Unlock()
 }
 
 // descriptors returns a slice of added service descriptors
@@ -174,7 +191,7 @@ func (coll *serviceCollection) descriptors() []*serviceDescriptor {
 	coll.mx.RLock()
 	defer coll.mx.RUnlock()
 
-	descriptors := make([]*serviceDescriptor, 0, len(coll.Descriptors))
+	descriptors := make([]*serviceDescriptor, len(coll.Descriptors))
 	copy(descriptors, coll.Descriptors)
 
 	return descriptors
