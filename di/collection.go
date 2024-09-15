@@ -41,7 +41,7 @@ type serviceDescriptor struct {
 	// ImplementationType is the service implementation type
 	ImplementationType reflect.Type
 
-	// Implementation is the optional service implementation instance
+	// Instance is the optional service implementation instance
 	Instance *reflect.Value
 
 	// Factory is service serviceFactory
