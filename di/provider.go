@@ -145,6 +145,34 @@ func (list *serviceAccessorsList) Slice() []*serviceAccessor {
 // serviceAccessors a map with a list of accessors for the key ID
 type serviceAccessors map[serviceIdentifier]*serviceAccessorsList
 
+// serviceInstances is a concurrent structure of service descriptor's instances
+type serviceInstances struct {
+	// values is a map where the key is a serviceDescriptor
+	// and the value is the descriptor's service instance
+	values map[*serviceDescriptor]reflect.Value
+	// mx is a mutex to protect the values
+	mx sync.RWMutex
+}
+
+func newServiceInstances() *serviceInstances {
+	return &serviceInstances{
+		values: make(map[*serviceDescriptor]reflect.Value),
+	}
+}
+
+func (insts *serviceInstances) Get(descriptor *serviceDescriptor) (instance reflect.Value, ok bool) {
+	insts.mx.RLock()
+	defer insts.mx.RUnlock()
+	instance, ok = insts.values[descriptor]
+	return
+}
+
+func (insts *serviceInstances) Set(descriptor *serviceDescriptor, value reflect.Value) {
+	insts.mx.Lock()
+	defer insts.mx.Unlock()
+	insts.values[descriptor] = value
+}
+
 // serviceIdentifier stores the service type and key
 type serviceIdentifier struct {
 	// Type is the service type
@@ -181,9 +209,7 @@ func (sp *serviceProvider) ResolveFactoryDeps(factory *serviceFactory) []reflect
 
 // GetServiceInstance gets a descriptor's existing service instance or creates a new one
 func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (instance reflect.Value) {
-	sp.mx.RLock()
-	instance, ok := sp.Instances[descriptor]
-	sp.mx.RUnlock()
+	instance, ok := sp.instances.Get(descriptor)
 
 	if ok {
 		return
@@ -197,23 +223,19 @@ func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (in
 	}
 
 	instance = values[0]
-
-	sp.mx.Lock()
-	sp.Instances[descriptor] = instance
-	sp.mx.Unlock()
+	sp.instances.Set(descriptor, instance)
 
 	return
 }
 
 // serviceProvider implements the ServiceProvider interface
 type serviceProvider struct {
-	// Accessors is a map for service identifiers of service descriptors lists
-	Accessors serviceAccessors
+	// accessors is a map for service identifiers of service descriptors lists
+	accessors serviceAccessors
 
-	// Instances is a map where the key is a serviceDescriptor
-	// and the value is the descriptor's service instance
-	Instances map[*serviceDescriptor]reflect.Value
-	// mx is a mutex to protect the Instances
+	// instances is the serviceInstances
+	instances *serviceInstances
+	// mx is a mutex to protect the instances
 	mx sync.RWMutex
 }
 
@@ -237,8 +259,8 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 	}
 
 	return &serviceProvider{
-		Accessors: accessors,
-		Instances: make(map[*serviceDescriptor]reflect.Value),
+		accessors: accessors,
+		instances: newServiceInstances(),
 	}
 }
 
@@ -249,7 +271,7 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 		id.Type = id.Type.Elem()
 	}
 
-	accessors, ok := sp.Accessors[id]
+	accessors, ok := sp.accessors[id]
 	if !ok {
 		return reflect.Value{}, false
 	}
