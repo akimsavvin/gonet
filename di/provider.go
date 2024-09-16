@@ -111,10 +111,8 @@ func (list *serviceAccessorsList) Last() *serviceAccessor {
 func (list *serviceAccessorsList) Slice() []*serviceAccessor {
 	sl := make([]*serviceAccessor, 0, list.Len)
 
-	current := list.Tail
-	for current != nil {
+	for current := list.Tail; current != nil; current = current.Next {
 		sl = append(sl, current.Value)
-		current = current.Next
 	}
 
 	slices.Reverse(sl)
