@@ -53,20 +53,6 @@ func newServiceAccessor(descriptor *serviceDescriptor) *serviceAccessor {
 }
 
 // GetInstance returns the accessor service instance
-//func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value {
-//	accessor.mx.Lock()
-//	defer accessor.mx.Unlock()
-//
-//	if accessor.Instance != nil {
-//		return *accessor.Instance
-//	}
-//
-//	instance := sp.GetServiceInstance(accessor.Descriptor)
-//	accessor.Instance = &instance
-//
-//	return instance
-//}
-
 func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value {
 	accessor.mx.Lock()
 	instance := accessor.Instance
