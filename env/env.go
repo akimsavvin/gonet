@@ -6,6 +6,8 @@ package env
 
 import "os"
 
+const Key = "ENVIRONMENT"
+
 const (
 	Development = "Development"
 	Staging     = "Staging"
@@ -13,7 +15,7 @@ const (
 )
 
 func Current() (string, bool) {
-	env := os.Getenv("ENVIRONMENT")
+	env := os.Getenv(Key)
 	ok := env != ""
 
 	return env, ok
