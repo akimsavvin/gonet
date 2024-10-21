@@ -37,6 +37,8 @@ type serviceAccessor struct {
 	// Descriptor is the accessor's serviceDescriptor
 	Descriptor *serviceDescriptor
 
+	// mx protects the service instance
+	mx sync.RWMutex
 	// Instance is the accessor's service instance
 	// nil if the service instance has not been requested yet
 	Instance *reflect.Value
@@ -51,15 +53,42 @@ func newServiceAccessor(descriptor *serviceDescriptor) *serviceAccessor {
 }
 
 // GetInstance returns the accessor service instance
+//func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value {
+//	accessor.mx.Lock()
+//	defer accessor.mx.Unlock()
+//
+//	if accessor.Instance != nil {
+//		return *accessor.Instance
+//	}
+//
+//	instance := sp.GetServiceInstance(accessor.Descriptor)
+//	accessor.Instance = &instance
+//
+//	return instance
+//}
+
 func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value {
+	accessor.mx.Lock()
+	instance := accessor.Instance
+	accessor.mx.Unlock()
+
+	if instance != nil {
+		return *accessor.Instance
+	}
+
+	accessor.mx.Lock()
+	defer accessor.mx.Unlock()
+
+	// if the goroutine was interrupted before the write lock was acquired,
+	// need to check if the instance has been already set
 	if accessor.Instance != nil {
 		return *accessor.Instance
 	}
 
-	instance := sp.GetServiceInstance(accessor.Descriptor)
-	accessor.Instance = &instance
+	newInstance := sp.GetServiceInstance(accessor.Descriptor)
+	accessor.Instance = &newInstance
 
-	return instance
+	return newInstance
 }
 
 type (
@@ -123,34 +152,6 @@ func (list *serviceAccessorsList) Slice() []*serviceAccessor {
 // serviceAccessors a map with a list of accessors for the key ID
 type serviceAccessors map[serviceIdentifier]*serviceAccessorsList
 
-// serviceInstances is a concurrent structure of service descriptor's instances
-type serviceInstances struct {
-	// mx is a mutex for concurrent access
-	mx sync.RWMutex
-	// values is a map where the key is a serviceDescriptor
-	// and the value is the descriptor's service instance
-	values map[*serviceDescriptor]reflect.Value
-}
-
-func newServiceInstances() *serviceInstances {
-	return &serviceInstances{
-		values: make(map[*serviceDescriptor]reflect.Value),
-	}
-}
-
-func (insts *serviceInstances) Get(descriptor *serviceDescriptor) (instance reflect.Value, ok bool) {
-	insts.mx.RLock()
-	defer insts.mx.RUnlock()
-	instance, ok = insts.values[descriptor]
-	return
-}
-
-func (insts *serviceInstances) Set(descriptor *serviceDescriptor, value reflect.Value) {
-	insts.mx.Lock()
-	defer insts.mx.Unlock()
-	insts.values[descriptor] = value
-}
-
 // serviceIdentifier stores the service type and key
 type serviceIdentifier struct {
 	// Type is the service type
@@ -186,13 +187,7 @@ func (sp *serviceProvider) ResolveFactoryDeps(factory *serviceFactory) []reflect
 }
 
 // GetServiceInstance gets a descriptor's existing service instance or creates a new one
-func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (instance reflect.Value) {
-	instance, ok := sp.instances.Get(descriptor)
-
-	if ok {
-		return
-	}
-
+func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) reflect.Value {
 	deps := sp.ResolveFactoryDeps(descriptor.Factory)
 	values := descriptor.Factory.Value.Call(deps)
 	if descriptor.Factory.HasErr && !values[1].IsNil() {
@@ -200,21 +195,13 @@ func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) (in
 			descriptor.ImplementationType, values[1].Interface().(error).Error())
 	}
 
-	instance = values[0]
-	sp.instances.Set(descriptor, instance)
-
-	return
+	return values[0]
 }
 
 // serviceProvider implements the ServiceProvider interface
 type serviceProvider struct {
 	// accessors is a map for service identifiers of service descriptors lists
 	accessors serviceAccessors
-
-	// mx is a mutex to protect the instances
-	mx sync.RWMutex
-	// instances is the serviceInstances
-	instances *serviceInstances
 }
 
 // newServiceProvider creates a new serviceProvider
@@ -238,7 +225,6 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 
 	return &serviceProvider{
 		accessors: accessors,
-		instances: newServiceInstances(),
 	}
 }
 
