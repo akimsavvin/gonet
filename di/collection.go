@@ -49,11 +49,12 @@ type serviceDescriptor struct {
 }
 
 // serviceCollection contains a list of service descriptors
+// implements the ServiceCollection interface
 type serviceCollection struct {
-	// Descriptors is a slice of service descriptors added to the collection
-	Descriptors []*serviceDescriptor
 	// mx is a mutex to protect the Descriptors
 	mx sync.RWMutex
+	// Descriptors is a slice of service descriptors added to the collection
+	Descriptors []*serviceDescriptor
 }
 
 // newServiceCollection creates a new serviceCollection

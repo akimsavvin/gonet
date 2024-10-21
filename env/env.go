@@ -20,11 +20,9 @@ func Current() (string, bool) {
 }
 
 func CurrentOrDefault() string {
-	env, ok := Current()
-
-	if !ok {
-		return Development
+	if env, ok := Current(); ok {
+		return env
 	}
 
-	return env
+	return Development
 }

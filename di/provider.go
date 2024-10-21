@@ -125,11 +125,11 @@ type serviceAccessors map[serviceIdentifier]*serviceAccessorsList
 
 // serviceInstances is a concurrent structure of service descriptor's instances
 type serviceInstances struct {
+	// mx is a mutex for concurrent access
+	mx sync.RWMutex
 	// values is a map where the key is a serviceDescriptor
 	// and the value is the descriptor's service instance
 	values map[*serviceDescriptor]reflect.Value
-	// mx is a mutex to protect the values
-	mx sync.RWMutex
 }
 
 func newServiceInstances() *serviceInstances {
@@ -211,10 +211,10 @@ type serviceProvider struct {
 	// accessors is a map for service identifiers of service descriptors lists
 	accessors serviceAccessors
 
-	// instances is the serviceInstances
-	instances *serviceInstances
 	// mx is a mutex to protect the instances
 	mx sync.RWMutex
+	// instances is the serviceInstances
+	instances *serviceInstances
 }
 
 // newServiceProvider creates a new serviceProvider
@@ -256,9 +256,7 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 
 	if isSlice {
 		res := reflect.MakeSlice(reflect.SliceOf(id.Type), accessors.Len, accessors.Len)
-		sl := accessors.Slice()
-
-		for i, accessor := range sl {
+		for i, accessor := range accessors.Slice() {
 			instance := accessor.GetInstance(sp)
 			res.Index(i).Set(instance)
 		}

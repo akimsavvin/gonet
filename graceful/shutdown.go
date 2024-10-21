@@ -8,18 +8,25 @@ import (
 	"context"
 	"os"
 	"os/signal"
+	"syscall"
 )
 
-// OnShutdown block invoking goroutine and wait for os.Interrupt or os.Kill signals to invoke a callback
-func OnShutdown(callback func()) {
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, os.Kill)
-	<-stop
-
-	callback()
+var sigs = []os.Signal{
+	syscall.SIGINT,
+	syscall.SIGTERM,
 }
 
-// Context creates a new context cancelled on os.Interrupt or os.Kill signals
-func Context() (context.Context, context.CancelFunc) {
-	return signal.NotifyContext(context.Background(), os.Interrupt, os.Kill)
+// WaitShutdown block invoking goroutine and wait for os.Interrupt or os.Kill signals
+func WaitShutdown() {
+	ctx, _ := Context()
+	<-ctx.Done()
+}
+
+// Context creates a new context that will be cancelled on os.Interrupt or os.Kill signals
+func Context(parent ...context.Context) (context.Context, context.CancelFunc) {
+	if len(parent) > 0 {
+		return signal.NotifyContext(parent[0], sigs...)
+	}
+
+	return signal.NotifyContext(context.Background(), sigs...)
 }
