@@ -12,7 +12,7 @@ ___
 
 ### Prerequisites
 
-- **[Go](https://go.dev/)**: version 1.20.0 or higher.
+- **[Go](https://go.dev/)**: version 1.18.0 or higher.
 
 ### Getting GoNet
 
@@ -41,9 +41,7 @@ GoNet provides advanced tools to deal with dependency injection.
 ```go
 package greeter
 
-import (
-	"fmt"
-)
+import "fmt"
 
 type UserRepo interface {
 	GetNameByID(id int) string
@@ -53,13 +51,13 @@ type Greeter struct {
 	repo UserRepo
 }
 
-func New(repo UserRepo) *Greeter {
+func NewGreeter(repo UserRepo) *Greeter {
 	return &Greeter{
 		repo: repo,
 	}
 }
 
-func (g *Greeter) GreetByID(id int) {
+func (g *Greeter) Greet(id int) {
 	fmt.Printf("Hello, %s!\n", g.repo.GetNameByID(id))
 }
 ```
@@ -75,10 +73,10 @@ type UserRepo struct {
 
 func NewUserRepo() *UserRepo {
 	return &UserRepo{
-       data: map[int]string{
-		   17: "Akim",
-       },
-    }
+		data: map[int]string{
+			17: "Akim",
+		},
+	}
 }
 
 func (repo *UserRepo) GetNameByID(id int) string {
@@ -93,13 +91,16 @@ package main
 
 import (
 	"github.com/akimsavvin/gonet/di"
-	"greeter"
-	"storage"
+	"myproject/greeter"
+	"myproject/storage"
 )
 
 func main() {
 	di.AddService[greeter.UserRepo](storage.NewUserRepo)
-	di.AddService[*greeter.Greeter](greeter.New)
+	di.AddService[*greeter.Greeter](greeter.NewGreeter)
+
+	g := di.GetRequiredService[*greeter.Greeter]()
+	g.Greet(17) // stdout: Hello, Akim!
 }
 ```
 
@@ -186,13 +187,9 @@ func main() {
 	ctx, cancel := graceful.Context()
 	defer cancel()
 
-	app.Start(ctx, ...)
+	go app.Start(ctx, ...)
 
-	// current goroutine will be blocked
-	// and provided function will be invoked on os.Interrupt or os.Kill
-	graceful.OnShutdown(func() {
-		app.Stop()
-		println("application stopped")
-	})
+	// current goroutine will be blocked and wait until the application is stopped
+	graceful.WaitShutdown()
 }
 ```
