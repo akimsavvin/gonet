@@ -32,7 +32,7 @@ func (suite *TestCurrentSuite) TestEmpty() {
 // TestNonEmpty get the current environment variable and return it
 func (suite *TestCurrentSuite) TestNonEmpty() {
 	// Arrange
-	os.Setenv("GONET_ENVIRONMENT", Staging)
+	os.Setenv("ENVIRONMENT", Staging)
 
 	// Act
 	env, ok := Current()
@@ -67,7 +67,7 @@ func (suite *TestCurrentOrDefaultSuite) TestEmpty() {
 // TestNonEmpty get the current environment variable and return it
 func (suite *TestCurrentOrDefaultSuite) TestNonEmpty() {
 	// Arrange
-	os.Setenv("GONET_ENVIRONMENT", Staging)
+	os.Setenv("ENVIRONMENT", Staging)
 
 	// Act
 	env := CurrentOrDefault()
