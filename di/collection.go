@@ -165,7 +165,19 @@ func AddService[T any](factoryOrValue any) {
 	GetServiceCollection().AddService(generic.TypeOf[T](), factoryOrValue)
 }
 
+// AddValue adds a new singleton value the default service collection with the provided value
+// Same as the AddService[T](value), but typed
+func AddValue[T any](value T) {
+	GetServiceCollection().AddService(generic.TypeOf[T](), value)
+}
+
 // AddKeyedService adds a new keyed singleton service to the default service collection with the provided factory or instance
 func AddKeyedService[T any](key string, factoryOrValue any) {
 	GetServiceCollection().AddKeyedService(generic.TypeOf[T](), key, factoryOrValue)
+}
+
+// AddKeyedValue adds a new keyed value to the default service collection with the provided value
+// Same as the AddKeyedService[T](value), but typed
+func AddKeyedValue[T any](key string, value T) {
+	GetServiceCollection().AddKeyedService(generic.TypeOf[T](), key, value)
 }
