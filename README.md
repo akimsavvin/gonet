@@ -19,7 +19,7 @@ ___
 With [Go module](https://github.com/golang/go/wiki/Modules) support, simply add the following import
 
 ```go
-import "github.com/akimsavvin/gonet"
+import gonet "github.com/akimsavvin/gonet/v2"
 ```
 
 to your code, and then `go [build|run|test]` will automatically fetch the necessary dependencies.
@@ -27,7 +27,7 @@ to your code, and then `go [build|run|test]` will automatically fetch the necess
 Otherwise, run the following Go command to install the `gonet` package:
 
 ```sh
-$ go get -u github.com/akimsavvin/gonet
+$ go get -u github.com/akimsavvin/gonet/v2
 ```
 
 ## Dependency injection

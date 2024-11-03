@@ -5,7 +5,7 @@
 package di
 
 import (
-	"github.com/akimsavvin/gonet/generic"
+	"github.com/akimsavvin/gonet/v2/generic"
 	"log"
 	"reflect"
 	"sync"
