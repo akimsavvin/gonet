@@ -2,7 +2,7 @@
 // ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
 // 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
 
-module github.com/akimsavvin/gonet
+module github.com/akimsavvin/gonet/v2
 
 go 1.18.0
 
