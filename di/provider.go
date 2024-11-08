@@ -226,18 +226,18 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 		return reflect.Value{}, false
 	}
 
-	if isSlice {
-		res := reflect.MakeSlice(reflect.SliceOf(id.Type), accessors.Len, accessors.Len)
-		for i, accessor := range accessors.Slice() {
-			instance := accessor.Instance(sp)
-			res.Index(i).Set(instance)
-		}
-
-		return res, true
+	if !isSlice {
+		accessor := accessors.Last()
+		return accessor.Instance(sp), true
 	}
 
-	accessor := accessors.Last()
-	return accessor.Instance(sp), true
+	res := reflect.MakeSlice(reflect.SliceOf(id.Type), accessors.Len, accessors.Len)
+	for i, accessor := range accessors.Slice() {
+		instance := accessor.Instance(sp)
+		res.Index(i).Set(instance)
+	}
+
+	return res, true
 }
 
 // GetService gets an instance for the provided service type
