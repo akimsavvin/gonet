@@ -39,27 +39,39 @@ type serviceAccessor struct {
 
 	// mx protects the service instance
 	mx sync.RWMutex
-	// Instance is the accessor's service instance
+	// instance is the accessor's service instance
 	// nil if the service instance has not been requested yet
-	Instance *reflect.Value
+	instance *reflect.Value
 }
 
 // newServiceAccessor creates a new serviceAccessor
 func newServiceAccessor(descriptor *serviceDescriptor) *serviceAccessor {
 	return &serviceAccessor{
 		Descriptor: descriptor,
-		Instance:   descriptor.Instance,
+		instance:   descriptor.Instance,
 	}
 }
 
-// GetInstance returns the accessor service instance
-func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value {
+// createInstance creates an instance of the accessor descriptor service
+func (accessor *serviceAccessor) createInstance(sp *serviceProvider) reflect.Value {
+	deps := sp.resolveFactoryDeps(accessor.Descriptor.Factory)
+	values := accessor.Descriptor.Factory.Value.Call(deps)
+	if accessor.Descriptor.Factory.HasErr && !values[1].IsNil() {
+		log.Panicf("[%v]: could not create a service instance due to error: %s\n",
+			accessor.Descriptor.ImplementationType, values[1].Interface().(error).Error())
+	}
+
+	return values[0]
+}
+
+// Instance returns the accessor service instance
+func (accessor *serviceAccessor) Instance(sp *serviceProvider) reflect.Value {
 	accessor.mx.Lock()
-	instance := accessor.Instance
+	instance := accessor.instance
 	accessor.mx.Unlock()
 
 	if instance != nil {
-		return *accessor.Instance
+		return *accessor.instance
 	}
 
 	accessor.mx.Lock()
@@ -67,12 +79,12 @@ func (accessor *serviceAccessor) GetInstance(sp *serviceProvider) reflect.Value 
 
 	// if the goroutine was interrupted before the write lock was acquired,
 	// need to check if the instance has been already set
-	if accessor.Instance != nil {
-		return *accessor.Instance
+	if accessor.instance != nil {
+		return *accessor.instance
 	}
 
-	newInstance := sp.GetServiceInstance(accessor.Descriptor)
-	accessor.Instance = &newInstance
+	newInstance := accessor.createInstance(sp)
+	accessor.instance = &newInstance
 
 	return newInstance
 }
@@ -151,39 +163,6 @@ type serviceIdentifier struct {
 	HasKey bool
 }
 
-// ResolveFactoryDeps returns a slice of service dependencies for the provided factory
-func (sp *serviceProvider) ResolveFactoryDeps(factory *serviceFactory) []reflect.Value {
-	serviceDeps := make([]reflect.Value, factory.DepsCount)
-
-	for i := 0; i < factory.DepsCount; i++ {
-		depType := factory.Type.In(i)
-		depID := serviceIdentifier{
-			Type: depType,
-		}
-
-		dep, ok := sp.GetServiceID(depID)
-		if !ok {
-			log.Panicf("[%v]: no service found for factory dependency type \"%v\"\n", factory.Type, depType)
-		}
-
-		serviceDeps[i] = dep
-	}
-
-	return serviceDeps
-}
-
-// GetServiceInstance gets a descriptor's existing service instance or creates a new one
-func (sp *serviceProvider) GetServiceInstance(descriptor *serviceDescriptor) reflect.Value {
-	deps := sp.ResolveFactoryDeps(descriptor.Factory)
-	values := descriptor.Factory.Value.Call(deps)
-	if descriptor.Factory.HasErr && !values[1].IsNil() {
-		log.Panicf("[%v]: could not create a service instance due to error: %s\n",
-			descriptor.ImplementationType, values[1].Interface().(error).Error())
-	}
-
-	return values[0]
-}
-
 // serviceProvider implements the ServiceProvider interface
 type serviceProvider struct {
 	// accessors is a map for service identifiers of service descriptors lists
@@ -214,6 +193,27 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 	}
 }
 
+// resolveFactoryDeps returns a slice of service dependencies for the provided factory
+func (sp *serviceProvider) resolveFactoryDeps(factory *serviceFactory) []reflect.Value {
+	serviceDeps := make([]reflect.Value, factory.DepsCount)
+
+	for i := 0; i < factory.DepsCount; i++ {
+		depType := factory.Type.In(i)
+		depID := serviceIdentifier{
+			Type: depType,
+		}
+
+		dep, ok := sp.GetServiceID(depID)
+		if !ok {
+			log.Panicf("[%v]: no service found for factory dependency type \"%v\"\n", factory.Type, depType)
+		}
+
+		serviceDeps[i] = dep
+	}
+
+	return serviceDeps
+}
+
 // GetServiceID gets an instance for the provided service identifier
 func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bool) {
 	isSlice := id.Type.Kind() == reflect.Slice
@@ -229,7 +229,7 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 	if isSlice {
 		res := reflect.MakeSlice(reflect.SliceOf(id.Type), accessors.Len, accessors.Len)
 		for i, accessor := range accessors.Slice() {
-			instance := accessor.GetInstance(sp)
+			instance := accessor.Instance(sp)
 			res.Index(i).Set(instance)
 		}
 
@@ -237,7 +237,7 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 	}
 
 	accessor := accessors.Last()
-	return accessor.GetInstance(sp), true
+	return accessor.Instance(sp), true
 }
 
 // GetService gets an instance for the provided service type
