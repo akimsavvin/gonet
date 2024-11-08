@@ -305,26 +305,42 @@ func AssertRequiredService[T any](service reflect.Value) T {
 	return service.Interface().(T)
 }
 
-// GetService returns an asserted service instance from the default serviceProvider instance
+// GetServiceSP returns an asserted service instance from the provided ServiceProvider instance
+func GetServiceSP[T any](sp ServiceProvider) (T, bool) {
+	return AssertService[T](sp.GetService(generic.TypeOf[T]()))
+}
+
+// GetService returns an asserted service instance from the default ServiceProvider instance
 func GetService[T any]() (T, bool) {
-	return AssertService[T](GetServiceProvider().
-		GetService(generic.TypeOf[T]()))
+	return GetServiceSP[T](GetServiceProvider())
 }
 
-// GetKeyedService returns an asserted keyed service instance from the default serviceProvider instance
+// GetKeyedServiceSP returns an asserted keyed service instance from the provided ServiceProvider instance
+func GetKeyedServiceSP[T any](sp ServiceProvider, key string) (T, bool) {
+	return AssertService[T](sp.GetKeyedService(generic.TypeOf[T](), key))
+}
+
+// GetKeyedService returns an asserted keyed service instance from the default ServiceProvider instance
 func GetKeyedService[T any](key string) (T, bool) {
-	return AssertService[T](GetServiceProvider().
-		GetKeyedService(generic.TypeOf[T](), key))
+	return GetKeyedServiceSP[T](GetServiceProvider(), key)
 }
 
-// GetRequiredService returns an asserted required service instance from the default serviceProvider instance
+// GetRequiredServiceSP returns an asserted required service instance from the provided ServiceProvider instance
+func GetRequiredServiceSP[T any](sp ServiceProvider) T {
+	return AssertRequiredService[T](sp.GetRequiredService(generic.TypeOf[T]()))
+}
+
+// GetRequiredService returns an asserted required service instance from the default ServiceProvider instance
 func GetRequiredService[T any]() T {
-	return AssertRequiredService[T](GetServiceProvider().
-		GetRequiredService(generic.TypeOf[T]()))
+	return GetRequiredServiceSP[T](GetServiceProvider())
 }
 
-// GetRequiredKeyedService returns an asserted keyed required service instance from the default serviceProvider instance
+// GetRequiredKeyedServiceSP returns an asserted keyed required service instance from the provided ServiceProvider instance
+func GetRequiredKeyedServiceSP[T any](sp ServiceProvider, key string) T {
+	return AssertRequiredService[T](sp.GetRequiredKeyedService(generic.TypeOf[T](), key))
+}
+
+// GetRequiredKeyedService returns an asserted keyed required service instance from the default ServiceProvider instance
 func GetRequiredKeyedService[T any](key string) T {
-	return AssertRequiredService[T](GetServiceProvider().
-		GetRequiredKeyedService(generic.TypeOf[T](), key))
+	return GetRequiredKeyedServiceSP[T](GetServiceProvider(), key)
 }
