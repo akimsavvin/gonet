@@ -294,7 +294,7 @@ func Build() {
 // AssertService is used to assert returned value from the GetService method to provided generic type
 func AssertService[T any](service reflect.Value, ok bool) (T, bool) {
 	if !ok {
-		return generic.Default[T](), false
+		return *new(T), false
 	}
 
 	return AssertRequiredService[T](service), true
