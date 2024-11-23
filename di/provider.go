@@ -285,7 +285,7 @@ func GetServiceProvider() ServiceProvider {
 // Build builds a default serviceProvider instance from the current service collection
 func Build() {
 	serviceProviderInstance.Store(newServiceProvider(
-		GetServiceCollection().descriptors()))
+		ServiceCollectionInst().descriptors()))
 }
 
 // AssertService is used to assert returned value from the GetService method to provided generic type

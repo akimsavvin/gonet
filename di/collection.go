@@ -151,8 +151,8 @@ func (coll *serviceCollection) descriptors() []*serviceDescriptor {
 // serviceCollectionInstance the instance of the service collection created with init function
 var serviceCollectionInstance atomic.Pointer[serviceCollection]
 
-// GetServiceCollection returns an instance of ServiceCollection
-func GetServiceCollection() ServiceCollection {
+// ServiceCollectionInst returns an instance of the default ServiceCollection
+func ServiceCollectionInst() ServiceCollection {
 	return serviceCollectionInstance.Load()
 }
 
@@ -163,22 +163,22 @@ func init() {
 
 // AddService adds a new singleton service to the default service collection with the provided factory or instance
 func AddService[T any](factoryOrValue any) {
-	GetServiceCollection().AddService(reflect.TypeFor[T](), factoryOrValue)
+	ServiceCollectionInst().AddService(reflect.TypeFor[T](), factoryOrValue)
 }
 
 // AddValue adds a new singleton value the default service collection with the provided value
 // Same as the AddService[T](value), but typed
 func AddValue[T any](value T) {
-	GetServiceCollection().AddService(reflect.TypeFor[T](), value)
+	ServiceCollectionInst().AddService(reflect.TypeFor[T](), value)
 }
 
 // AddKeyedService adds a new keyed singleton service to the default service collection with the provided factory or instance
 func AddKeyedService[T any](key string, factoryOrValue any) {
-	GetServiceCollection().AddKeyedService(reflect.TypeFor[T](), key, factoryOrValue)
+	ServiceCollectionInst().AddKeyedService(reflect.TypeFor[T](), key, factoryOrValue)
 }
 
 // AddKeyedValue adds a new keyed value to the default service collection with the provided value
 // Same as the AddKeyedService[T](value), but typed
 func AddKeyedValue[T any](key string, value T) {
-	GetServiceCollection().AddKeyedService(reflect.TypeFor[T](), key, value)
+	ServiceCollectionInst().AddKeyedService(reflect.TypeFor[T](), key, value)
 }

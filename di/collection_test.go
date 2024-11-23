@@ -117,7 +117,7 @@ func TestAddService(t *testing.T) {
 	// Arrange
 	inst := gofakeit.Sentence(5)
 
-	coll := GetServiceCollection()
+	coll := ServiceCollectionInst()
 
 	// Act
 	AddService[string](inst)
@@ -137,7 +137,7 @@ func TestAddKeyedService(t *testing.T) {
 		return gofakeit.Sentence(5)
 	}
 
-	coll := GetServiceCollection()
+	coll := ServiceCollectionInst()
 
 	// Act
 	AddKeyedService[string](key, f)
@@ -150,10 +150,10 @@ func TestAddKeyedService(t *testing.T) {
 		reflect.TypeOf(f).Out(0))
 }
 
-// TestGetServiceCollection tests the GetServiceCollection function
+// TestGetServiceCollection tests the ServiceCollectionInst function
 func TestGetServiceCollection(t *testing.T) {
 	// Act
-	coll := GetServiceCollection()
+	coll := ServiceCollectionInst()
 
 	// Assert
 	assert.IsType(t, &serviceCollection{}, coll)
