@@ -5,7 +5,6 @@
 package di
 
 import (
-	"github.com/akimsavvin/gonet/v2/generic"
 	"log"
 	"reflect"
 	"slices"
@@ -37,8 +36,8 @@ type serviceAccessor struct {
 	// Descriptor is the accessor's serviceDescriptor
 	Descriptor *serviceDescriptor
 
-	// mx protects the service instance
-	mx sync.RWMutex
+	// once protects the instance from creating multiple times
+	once sync.Once
 	// instance is the accessor's service instance
 	// nil if the service instance has not been requested yet
 	instance *reflect.Value
@@ -55,38 +54,25 @@ func newServiceAccessor(descriptor *serviceDescriptor) *serviceAccessor {
 // createInstance creates an instance of the accessor descriptor service
 func (accessor *serviceAccessor) createInstance(sp *serviceProvider) reflect.Value {
 	deps := sp.resolveFactoryDeps(accessor.Descriptor.Factory)
-	values := accessor.Descriptor.Factory.Value.Call(deps)
-	if accessor.Descriptor.Factory.HasErr && !values[1].IsNil() {
+	instance, err := accessor.Descriptor.Factory.Call(deps...)
+	if err != nil {
 		log.Panicf("[%v]: could not create a service instance due to error: %s\n",
-			accessor.Descriptor.ImplementationType, values[1].Interface().(error).Error())
+			accessor.Descriptor.Factory, err.Error())
 	}
 
-	return values[0]
+	return instance
 }
 
 // Instance returns the accessor service instance
 func (accessor *serviceAccessor) Instance(sp *serviceProvider) reflect.Value {
-	accessor.mx.Lock()
-	instance := accessor.instance
-	accessor.mx.Unlock()
+	accessor.once.Do(func() {
+		if accessor.instance == nil {
+			instance := accessor.createInstance(sp)
+			accessor.instance = &instance
+		}
+	})
 
-	if instance != nil {
-		return *accessor.instance
-	}
-
-	accessor.mx.Lock()
-	defer accessor.mx.Unlock()
-
-	// if the goroutine was interrupted before the write lock was acquired,
-	// need to check if the instance has been already set
-	if accessor.instance != nil {
-		return *accessor.instance
-	}
-
-	newInstance := accessor.createInstance(sp)
-	accessor.instance = &newInstance
-
-	return newInstance
+	return *accessor.instance
 }
 
 type (
@@ -171,8 +157,17 @@ type serviceProvider struct {
 
 // newServiceProvider creates a new serviceProvider
 func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvider {
+	sp := new(serviceProvider)
 	accessors := make(serviceAccessors)
 
+	spValue := reflect.ValueOf(sp)
+	spDescriptor := &serviceDescriptor{
+		Type:               reflect.TypeFor[ServiceProvider](),
+		ImplementationType: spValue.Type(),
+		Instance:           &spValue,
+	}
+
+	serviceDescriptors = append(serviceDescriptors, spDescriptor)
 	for _, descriptor := range serviceDescriptors {
 		id := serviceIdentifier{
 			Type:   descriptor.Type,
@@ -188,9 +183,8 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 		accessors[id].Append(accessor)
 	}
 
-	return &serviceProvider{
-		accessors: accessors,
-	}
+	sp.accessors = accessors
+	return sp
 }
 
 // resolveFactoryDeps returns a slice of service dependencies for the provided factory
@@ -223,7 +217,10 @@ func (sp *serviceProvider) GetServiceID(id serviceIdentifier) (reflect.Value, bo
 
 	accessors, ok := sp.accessors[id]
 	if !ok {
-		return reflect.Value{}, false
+		if isSlice {
+			return reflect.Zero(reflect.SliceOf(id.Type)), false
+		}
+		return reflect.Zero(id.Type), false
 	}
 
 	if !isSlice {
@@ -293,11 +290,7 @@ func Build() {
 
 // AssertService is used to assert returned value from the GetService method to provided generic type
 func AssertService[T any](service reflect.Value, ok bool) (T, bool) {
-	if !ok {
-		return *new(T), false
-	}
-
-	return AssertRequiredService[T](service), true
+	return AssertRequiredService[T](service), ok
 }
 
 // AssertRequiredService is used to assert returned value from the GetRequiredService method to provided generic type
@@ -307,7 +300,7 @@ func AssertRequiredService[T any](service reflect.Value) T {
 
 // GetServiceSP returns an asserted service instance from the provided ServiceProvider instance
 func GetServiceSP[T any](sp ServiceProvider) (T, bool) {
-	return AssertService[T](sp.GetService(generic.TypeOf[T]()))
+	return AssertService[T](sp.GetService(reflect.TypeFor[T]()))
 }
 
 // GetService returns an asserted service instance from the default ServiceProvider instance
@@ -317,7 +310,7 @@ func GetService[T any]() (T, bool) {
 
 // GetKeyedServiceSP returns an asserted keyed service instance from the provided ServiceProvider instance
 func GetKeyedServiceSP[T any](sp ServiceProvider, key string) (T, bool) {
-	return AssertService[T](sp.GetKeyedService(generic.TypeOf[T](), key))
+	return AssertService[T](sp.GetKeyedService(reflect.TypeFor[T](), key))
 }
 
 // GetKeyedService returns an asserted keyed service instance from the default ServiceProvider instance
@@ -327,7 +320,7 @@ func GetKeyedService[T any](key string) (T, bool) {
 
 // GetRequiredServiceSP returns an asserted required service instance from the provided ServiceProvider instance
 func GetRequiredServiceSP[T any](sp ServiceProvider) T {
-	return AssertRequiredService[T](sp.GetRequiredService(generic.TypeOf[T]()))
+	return AssertRequiredService[T](sp.GetRequiredService(reflect.TypeFor[T]()))
 }
 
 // GetRequiredService returns an asserted required service instance from the default ServiceProvider instance
@@ -337,7 +330,7 @@ func GetRequiredService[T any]() T {
 
 // GetRequiredKeyedServiceSP returns an asserted keyed required service instance from the provided ServiceProvider instance
 func GetRequiredKeyedServiceSP[T any](sp ServiceProvider, key string) T {
-	return AssertRequiredService[T](sp.GetRequiredKeyedService(generic.TypeOf[T](), key))
+	return AssertRequiredService[T](sp.GetRequiredKeyedService(reflect.TypeFor[T](), key))
 }
 
 // GetRequiredKeyedService returns an asserted keyed required service instance from the default ServiceProvider instance

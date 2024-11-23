@@ -5,7 +5,6 @@
 package di
 
 import (
-	"github.com/akimsavvin/gonet/v2/generic"
 	"log"
 	"reflect"
 )
@@ -43,7 +42,7 @@ func newServiceFactory(factory any) *serviceFactory {
 		log.Panicf("[%t]: service factory must return at least one value\n", factory)
 	case 1:
 	case 2:
-		if typ.Out(1) != generic.TypeOf[error]() {
+		if typ.Out(1) != reflect.TypeFor[error]() {
 			log.Panicf("[%t]: second service factory return value must be an error\n", factory)
 		}
 	default:
@@ -57,4 +56,14 @@ func newServiceFactory(factory any) *serviceFactory {
 		ReturnType: typ.Out(0),
 		HasErr:     numOut == 2,
 	}
+}
+
+// Call calls the factory function with the provided dependencies
+func (factory *serviceFactory) Call(deps ...reflect.Value) (reflect.Value, error) {
+	values := factory.Value.Call(deps)
+	if factory.HasErr && !values[1].IsNil() {
+		return reflect.Zero(factory.ReturnType), values[1].Interface().(error)
+	}
+
+	return values[0], nil
 }

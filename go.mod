@@ -4,7 +4,7 @@
 
 module github.com/akimsavvin/gonet/v2
 
-go 1.18.0
+go 1.22.0
 
 require (
 	github.com/brianvoe/gofakeit v3.18.0+incompatible

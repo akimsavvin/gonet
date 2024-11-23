@@ -5,7 +5,6 @@
 package di
 
 import (
-	"github.com/akimsavvin/gonet/v2/generic"
 	"github.com/brianvoe/gofakeit"
 	"github.com/stretchr/testify/assert"
 	"reflect"
@@ -22,13 +21,13 @@ func TestServiceCollection_AddDescriptor(t *testing.T) {
 	coll.AddDescriptor(sd)
 
 	// Assert
-	assert.Contains(t, coll.Descriptors, sd)
+	assert.Contains(t, coll.sds, sd)
 }
 
 // TestServiceCollection_AddServiceFactory tests the serviceCollection's AddServiceFactory method
 func TestServiceCollection_AddServiceFactory(t *testing.T) {
 	// Arrange
-	typ := generic.TypeOf[string]()
+	typ := reflect.TypeFor[string]()
 	f := func() string {
 		return gofakeit.Sentence(5)
 	}
@@ -39,13 +38,13 @@ func TestServiceCollection_AddServiceFactory(t *testing.T) {
 	coll.AddServiceFactory(typ, nil, f)
 
 	// Assert
-	assert.Equal(t, coll.Descriptors[0].ImplementationType, typ)
+	assert.Equal(t, coll.sds[0].ImplementationType, typ)
 }
 
 // TestServiceCollection_AddServiceInstance tests the serviceCollection's AddServiceInstance method
 func TestServiceCollection_AddServiceInstance(t *testing.T) {
 	// Arrange
-	typ := generic.TypeOf[string]()
+	typ := reflect.TypeFor[string]()
 	inst := gofakeit.Sentence(5)
 
 	coll := newServiceCollection()
@@ -54,13 +53,13 @@ func TestServiceCollection_AddServiceInstance(t *testing.T) {
 	coll.AddServiceInstance(typ, nil, inst)
 
 	// Assert
-	assert.Equal(t, coll.Descriptors[0].ImplementationType, typ)
+	assert.Equal(t, coll.sds[0].ImplementationType, typ)
 }
 
 // TestServiceCollection_AddServiceKey tests the serviceCollection's AddServiceKey method
 func TestServiceCollection_AddServiceKey(t *testing.T) {
 	// Arrange
-	typ := generic.TypeOf[string]()
+	typ := reflect.TypeFor[string]()
 	key := gofakeit.BuzzWord()
 	inst := gofakeit.Sentence(5)
 
@@ -70,15 +69,15 @@ func TestServiceCollection_AddServiceKey(t *testing.T) {
 	coll.AddServiceKey(typ, &key, inst)
 
 	// Assert
-	assert.True(t, coll.Descriptors[0].HasKey)
-	assert.Equal(t, coll.Descriptors[0].Key, key)
-	assert.Equal(t, coll.Descriptors[0].ImplementationType, reflect.TypeOf(inst))
+	assert.True(t, coll.sds[0].HasKey)
+	assert.Equal(t, coll.sds[0].Key, key)
+	assert.Equal(t, coll.sds[0].ImplementationType, reflect.TypeOf(inst))
 }
 
 // TestServiceCollection_AddService tests the serviceCollection's AddService method
 func TestServiceCollection_AddService(t *testing.T) {
 	// Arrange
-	typ := generic.TypeOf[string]()
+	typ := reflect.TypeFor[string]()
 	inst := gofakeit.Sentence(5)
 
 	coll := newServiceCollection()
@@ -87,15 +86,15 @@ func TestServiceCollection_AddService(t *testing.T) {
 	coll.AddService(typ, inst)
 
 	// Assert
-	assert.False(t, coll.Descriptors[0].HasKey)
-	assert.Empty(t, coll.Descriptors[0].Key)
-	assert.Equal(t, coll.Descriptors[0].ImplementationType, reflect.TypeOf(inst))
+	assert.False(t, coll.sds[0].HasKey)
+	assert.Empty(t, coll.sds[0].Key)
+	assert.Equal(t, coll.sds[0].ImplementationType, reflect.TypeOf(inst))
 }
 
 // TestServiceCollection_AddKeyedService tests the serviceCollection's AddKeyedService method
 func TestServiceCollection_AddKeyedService(t *testing.T) {
 	// Arrange
-	typ := generic.TypeOf[string]()
+	typ := reflect.TypeFor[string]()
 	key := gofakeit.BuzzWord()
 	f := func() string {
 		return gofakeit.Sentence(5)
@@ -107,9 +106,9 @@ func TestServiceCollection_AddKeyedService(t *testing.T) {
 	coll.AddKeyedService(typ, key, f)
 
 	// Assert
-	assert.True(t, coll.Descriptors[0].HasKey)
-	assert.Equal(t, coll.Descriptors[0].Key, key)
-	assert.Equal(t, coll.Descriptors[0].ImplementationType,
+	assert.True(t, coll.sds[0].HasKey)
+	assert.Equal(t, coll.sds[0].Key, key)
+	assert.Equal(t, coll.sds[0].ImplementationType,
 		reflect.TypeOf(f).Out(0))
 }
 

@@ -5,7 +5,6 @@
 package di
 
 import (
-	"github.com/akimsavvin/gonet/v2/generic"
 	"log"
 	"reflect"
 	"sync"
@@ -48,18 +47,20 @@ type serviceDescriptor struct {
 	Factory *serviceFactory
 }
 
-// serviceCollection contains a list of service descriptors
-// implements the ServiceCollection interface
+// serviceCollection implements the ServiceCollection interface
+// contains a list of service descriptors
 type serviceCollection struct {
-	// mx is a mutex to protect the Descriptors
+	// mx is a mutex to protect the sds
 	mx sync.RWMutex
-	// Descriptors is a slice of service descriptors added to the collection
-	Descriptors []*serviceDescriptor
+	// sds is a slice of service descriptors added to the collection
+	sds []*serviceDescriptor
 }
 
 // newServiceCollection creates a new serviceCollection
 func newServiceCollection() *serviceCollection {
-	return &serviceCollection{}
+	return &serviceCollection{
+		sds: make([]*serviceDescriptor, 0),
+	}
 }
 
 // AddService adds a new service to the service collection
@@ -133,7 +134,7 @@ func (coll *serviceCollection) AddServiceInstance(typ reflect.Type, key *string,
 func (coll *serviceCollection) AddDescriptor(sd *serviceDescriptor) {
 	coll.mx.Lock()
 	defer coll.mx.Unlock()
-	coll.Descriptors = append(coll.Descriptors, sd)
+	coll.sds = append(coll.sds, sd)
 }
 
 // descriptors returns a slice of added service descriptors
@@ -141,8 +142,8 @@ func (coll *serviceCollection) descriptors() []*serviceDescriptor {
 	coll.mx.RLock()
 	defer coll.mx.RUnlock()
 
-	descriptors := make([]*serviceDescriptor, len(coll.Descriptors))
-	copy(descriptors, coll.Descriptors)
+	descriptors := make([]*serviceDescriptor, len(coll.sds))
+	copy(descriptors, coll.sds)
 
 	return descriptors
 }
@@ -162,22 +163,22 @@ func init() {
 
 // AddService adds a new singleton service to the default service collection with the provided factory or instance
 func AddService[T any](factoryOrValue any) {
-	GetServiceCollection().AddService(generic.TypeOf[T](), factoryOrValue)
+	GetServiceCollection().AddService(reflect.TypeFor[T](), factoryOrValue)
 }
 
 // AddValue adds a new singleton value the default service collection with the provided value
 // Same as the AddService[T](value), but typed
 func AddValue[T any](value T) {
-	GetServiceCollection().AddService(generic.TypeOf[T](), value)
+	GetServiceCollection().AddService(reflect.TypeFor[T](), value)
 }
 
 // AddKeyedService adds a new keyed singleton service to the default service collection with the provided factory or instance
 func AddKeyedService[T any](key string, factoryOrValue any) {
-	GetServiceCollection().AddKeyedService(generic.TypeOf[T](), key, factoryOrValue)
+	GetServiceCollection().AddKeyedService(reflect.TypeFor[T](), key, factoryOrValue)
 }
 
 // AddKeyedValue adds a new keyed value to the default service collection with the provided value
 // Same as the AddKeyedService[T](value), but typed
 func AddKeyedValue[T any](key string, value T) {
-	GetServiceCollection().AddKeyedService(generic.TypeOf[T](), key, value)
+	GetServiceCollection().AddKeyedService(reflect.TypeFor[T](), key, value)
 }
