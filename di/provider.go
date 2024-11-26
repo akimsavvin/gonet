@@ -33,8 +33,8 @@ type ServiceProvider interface {
 
 // serviceAccessor is a struct used to get the service instance
 type serviceAccessor struct {
-	// Descriptor is the accessor's serviceDescriptor
-	Descriptor *serviceDescriptor
+	// descriptor is the accessor's serviceDescriptor
+	descriptor *serviceDescriptor
 
 	// once protects the instance from creating multiple times
 	once sync.Once
@@ -46,18 +46,18 @@ type serviceAccessor struct {
 // newServiceAccessor creates a new serviceAccessor
 func newServiceAccessor(descriptor *serviceDescriptor) *serviceAccessor {
 	return &serviceAccessor{
-		Descriptor: descriptor,
+		descriptor: descriptor,
 		instance:   descriptor.Instance,
 	}
 }
 
 // createInstance creates an instance of the accessor descriptor service
 func (accessor *serviceAccessor) createInstance(sp *serviceProvider) reflect.Value {
-	deps := sp.resolveFactoryDeps(accessor.Descriptor.Factory)
-	instance, err := accessor.Descriptor.Factory.Call(deps...)
+	deps := sp.resolveFactoryDeps(accessor.descriptor.Factory)
+	instance, err := accessor.descriptor.Factory.Call(deps...)
 	if err != nil {
 		log.Panicf("[%v]: could not create a service instance due to error: %s\n",
-			accessor.Descriptor.Factory, err.Error())
+			accessor.descriptor.Factory, err.Error())
 	}
 
 	return instance
@@ -81,8 +81,8 @@ type (
 		// Value is the serviceAccessor instance
 		Value *serviceAccessor
 
-		// Value is the next serviceAccessorsListItem in the list
-		Next *serviceAccessorsListItem
+		// Prev is the previous element in the list
+		Prev *serviceAccessorsListItem
 	}
 
 	// serviceAccessorsList is a singly-linked list of service accessors
@@ -110,7 +110,7 @@ func newServiceAccessorsList(accessors ...*serviceAccessor) *serviceAccessorsLis
 func (list *serviceAccessorsList) Append(accessor *serviceAccessor) {
 	list.Tail = &serviceAccessorsListItem{
 		Value: accessor,
-		Next:  list.Tail,
+		Prev:  list.Tail,
 	}
 	list.Len++
 }
@@ -124,7 +124,7 @@ func (list *serviceAccessorsList) Last() *serviceAccessor {
 func (list *serviceAccessorsList) Slice() []*serviceAccessor {
 	sl := make([]*serviceAccessor, 0, list.Len)
 
-	for current := list.Tail; current != nil; current = current.Next {
+	for current := list.Tail; current != nil; current = current.Prev {
 		sl = append(sl, current.Value)
 	}
 
