@@ -21,6 +21,12 @@ type ServiceCollection interface {
 	// the third argument must be either a factory creating a service instance or an instance itself
 	AddKeyedService(typ reflect.Type, key string, factoryOrInstance any)
 
+	// AddFactory adds a service descriptor to the collection for the provided factory return type
+	AddFactory(factory any)
+
+	// AddKeyedFactory adds a service descriptor to the collection for the provided factory return type and key
+	AddKeyedFactory(key string, factory any)
+
 	// descriptors returns a slice of added service descriptors
 	descriptors() []*serviceDescriptor
 }
@@ -71,6 +77,32 @@ func (coll *serviceCollection) AddService(typ reflect.Type, factoryOrInstance an
 // AddKeyedService adds a new keyed service to the service collection
 func (coll *serviceCollection) AddKeyedService(typ reflect.Type, key string, factoryOrInstance any) {
 	coll.AddServiceKey(typ, &key, factoryOrInstance)
+}
+
+// AddFactory adds a service descriptor to the collection for the provided factory return type
+func (coll *serviceCollection) AddFactory(factory any) {
+	f := newServiceFactory(factory)
+	sd := &serviceDescriptor{
+		Type:               f.ReturnType,
+		ImplementationType: f.ReturnType,
+		Factory:            f,
+	}
+
+	coll.AddDescriptor(sd)
+}
+
+// AddKeyedFactory adds a service descriptor to the collection for the provided factory return type and key
+func (coll *serviceCollection) AddKeyedFactory(key string, factory any) {
+	f := newServiceFactory(factory)
+	sd := &serviceDescriptor{
+		Type:               f.ReturnType,
+		HasKey:             true,
+		Key:                key,
+		ImplementationType: f.ReturnType,
+		Factory:            f,
+	}
+
+	coll.AddDescriptor(sd)
 }
 
 // AddServiceKey adds service to the service collection with the provided key
@@ -161,18 +193,18 @@ func init() {
 	serviceCollectionInstance.Store(newServiceCollection())
 }
 
-// AddService adds a new singleton service to the default service collection with the provided factory or instance
+// AddService adds a new service to the default service collection with the provided factory or instance
 func AddService[T any](factoryOrValue any) {
 	ServiceCollectionInst().AddService(reflect.TypeFor[T](), factoryOrValue)
 }
 
-// AddValue adds a new singleton value the default service collection with the provided value
+// AddValue adds a new value the default service collection with the provided value
 // Same as the AddService[T](value), but typed
 func AddValue[T any](value T) {
 	ServiceCollectionInst().AddService(reflect.TypeFor[T](), value)
 }
 
-// AddKeyedService adds a new keyed singleton service to the default service collection with the provided factory or instance
+// AddKeyedService adds a new keyed service to the default service collection with the provided factory or instance
 func AddKeyedService[T any](key string, factoryOrValue any) {
 	ServiceCollectionInst().AddKeyedService(reflect.TypeFor[T](), key, factoryOrValue)
 }
@@ -181,4 +213,14 @@ func AddKeyedService[T any](key string, factoryOrValue any) {
 // Same as the AddKeyedService[T](value), but typed
 func AddKeyedValue[T any](key string, value T) {
 	ServiceCollectionInst().AddKeyedService(reflect.TypeFor[T](), key, value)
+}
+
+// AddFactory adds a new service factory to the default service collection with the provided factory
+func AddFactory(factory any) {
+	ServiceCollectionInst().AddFactory(factory)
+}
+
+// AddKeyedFactory adds a new service keyed factory to the default service collection with the provided factory
+func AddKeyedFactory(key string, factory any) {
+	ServiceCollectionInst().AddKeyedFactory(key, factory)
 }
