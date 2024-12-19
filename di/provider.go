@@ -160,6 +160,10 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 	sp := new(serviceProvider)
 	accessors := make(serviceAccessors)
 
+	l := len(serviceDescriptors)
+	extendedServiceDescriptors := make([]*serviceDescriptor, l, l+1)
+	copy(extendedServiceDescriptors, serviceDescriptors)
+
 	spValue := reflect.ValueOf(sp)
 	spDescriptor := &serviceDescriptor{
 		Type:               reflect.TypeFor[ServiceProvider](),
@@ -167,8 +171,9 @@ func newServiceProvider(serviceDescriptors []*serviceDescriptor) *serviceProvide
 		Instance:           &spValue,
 	}
 
-	serviceDescriptors = append(serviceDescriptors, spDescriptor)
-	for _, descriptor := range serviceDescriptors {
+	extendedServiceDescriptors = append(extendedServiceDescriptors, spDescriptor)
+
+	for _, descriptor := range extendedServiceDescriptors {
 		id := serviceIdentifier{
 			Type:   descriptor.Type,
 			Key:    descriptor.Key,
@@ -272,8 +277,8 @@ func (sp *serviceProvider) GetRequiredKeyedService(typ reflect.Type, key string)
 // serviceProviderInstance a default serviceProvider instance
 var serviceProviderInstance atomic.Pointer[serviceProvider]
 
-// GetServiceProvider returns an instance of ServiceProvider
-func GetServiceProvider() ServiceProvider {
+// ServiceProviderInstance returns an instance of the default ServiceProvider
+func ServiceProviderInstance() ServiceProvider {
 	if instance := serviceProviderInstance.Load(); instance != nil {
 		return instance
 	}
@@ -282,10 +287,9 @@ func GetServiceProvider() ServiceProvider {
 	return nil
 }
 
-// Build builds a default serviceProvider instance from the current service collection
-func Build() {
-	serviceProviderInstance.Store(newServiceProvider(
-		ServiceCollectionInst().descriptors()))
+// BuildServiceProvider builds a default ServiceProvider instance from the default ServiceCollection
+func BuildServiceProvider() {
+	serviceProviderInstance.Store(newServiceProvider(ServiceCollectionInstance().descriptors()))
 }
 
 // AssertService is used to assert returned value from the GetService method to provided generic type
@@ -305,7 +309,7 @@ func GetServiceSP[T any](sp ServiceProvider) (T, bool) {
 
 // GetService returns an asserted service instance from the default ServiceProvider instance
 func GetService[T any]() (T, bool) {
-	return GetServiceSP[T](GetServiceProvider())
+	return GetServiceSP[T](ServiceProviderInstance())
 }
 
 // GetKeyedServiceSP returns an asserted keyed service instance from the provided ServiceProvider instance
@@ -315,7 +319,7 @@ func GetKeyedServiceSP[T any](sp ServiceProvider, key string) (T, bool) {
 
 // GetKeyedService returns an asserted keyed service instance from the default ServiceProvider instance
 func GetKeyedService[T any](key string) (T, bool) {
-	return GetKeyedServiceSP[T](GetServiceProvider(), key)
+	return GetKeyedServiceSP[T](ServiceProviderInstance(), key)
 }
 
 // GetRequiredServiceSP returns an asserted required service instance from the provided ServiceProvider instance
@@ -325,7 +329,7 @@ func GetRequiredServiceSP[T any](sp ServiceProvider) T {
 
 // GetRequiredService returns an asserted required service instance from the default ServiceProvider instance
 func GetRequiredService[T any]() T {
-	return GetRequiredServiceSP[T](GetServiceProvider())
+	return GetRequiredServiceSP[T](ServiceProviderInstance())
 }
 
 // GetRequiredKeyedServiceSP returns an asserted keyed required service instance from the provided ServiceProvider instance
@@ -335,5 +339,5 @@ func GetRequiredKeyedServiceSP[T any](sp ServiceProvider, key string) T {
 
 // GetRequiredKeyedService returns an asserted keyed required service instance from the default ServiceProvider instance
 func GetRequiredKeyedService[T any](key string) T {
-	return GetRequiredKeyedServiceSP[T](GetServiceProvider(), key)
+	return GetRequiredKeyedServiceSP[T](ServiceProviderInstance(), key)
 }
