@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// NewServiceFactorySuite test suite for newServiceFactory
+// NewServiceFactorySuite is a test suite for the newServiceFactory function
 type NewServiceFactorySuite struct {
 	suite.Suite
 }

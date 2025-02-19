@@ -4,11 +4,11 @@
 
 module github.com/akimsavvin/gonet/v2
 
-go 1.22.0
+go 1.23.0
 
 require (
-	github.com/brianvoe/gofakeit v3.18.0+incompatible
-	github.com/stretchr/testify v1.9.0
+	github.com/brianvoe/gofakeit/v7 v7.2.1
+	github.com/stretchr/testify v1.10.0
 )
 
 require (

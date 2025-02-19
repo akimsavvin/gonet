@@ -18,15 +18,12 @@ var sigs = []os.Signal{
 
 // WaitShutdown block invoking goroutine and wait for os.Interrupt or os.Kill signals
 func WaitShutdown() {
-	ctx, _ := Context()
-	<-ctx.Done()
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, sigs...)
+	<-ch
 }
 
 // Context creates a new context that will be cancelled on os.Interrupt or os.Kill signals
-func Context(parent ...context.Context) (context.Context, context.CancelFunc) {
-	if len(parent) > 0 {
-		return signal.NotifyContext(parent[0], sigs...)
-	}
-
-	return signal.NotifyContext(context.Background(), sigs...)
+func Context(parent context.Context) (context.Context, context.CancelFunc) {
+	return signal.NotifyContext(parent, sigs...)
 }
