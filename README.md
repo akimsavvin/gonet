@@ -1,195 +1,71 @@
-# GoNet framework
+<p>
+  <em><b>Gonet</b> is a <a href="https://dotnet.microsoft.com">.NET</a> inspired <b>DI framework</b>. Designed to <b>ease</b> things up for <b>fast</b> development with <a href="https://docs.gofiber.io/#zero-allocation"><b>zero memory allocation</b></a> and <b>performance</b> in mind.</em>
+</p>
 
-___
+## ⚙️ Installation
 
-- 🔥 GoNet is the first full-fledged framework made for Golang!
-- ⚡️ GoNet is inspired by .NET, NestJS and other languages frameworks
-- 🤖 GitHub Repository: https://github.com/akimsavvin/gonet
+Gonet requires **Go version `1.23` or higher** to run. If you need to install or upgrade Go, visit the [official Go download page](https://go.dev/dl/). To start setting up your project, create a new directory for your project and navigate into it. Then, initialize your project with Go modules by executing the following command in your terminal:
 
-___
-
-## Getting started
-
-### Prerequisites
-
-- **[Go](https://go.dev/)**: version 1.18.0 or higher.
-
-### Getting GoNet
-
-With [Go module](https://github.com/golang/go/wiki/Modules) support, simply add the following import
-
-```go
-import gonet "github.com/akimsavvin/gonet/v2"
+```bash
+go mod init github.com/you/repo
 ```
 
-to your code, and then `go [build|run|test]` will automatically fetch the necessary dependencies.
+To learn more about Go modules and how they work, you can check out the [Using Go Modules](https://go.dev/blog/using-go-modules) blog post.
 
-Otherwise, run the following Go command to install the `gonet` package:
+After setting up your project, you can install Gonet with the `go get` command:
 
-```sh
-$ go get -u github.com/akimsavvin/gonet/v2
+```bash
+go get -u github.com/akimsavvin/gonet/v2
 ```
 
-## Dependency injection
+This command fetches the Gonet package and adds it to your project's dependencies, allowing you to start building your applications with Gonet.
 
-GoNet provides advanced tools to deal with dependency injection.
+## ⚡️ Quickstart
 
-### Example
+Getting started with Gonet is easy. Here's a basic example to create a simple di container that contains a usual dependencies of modern application. This example demonstrates initializing a new Gonet container, setting up a dependencies, and getting the services.
 
-1. Declare a service and define a constructor which has all required dependencies in its parameters
+```go title="Example"
+package main
 
-```go
-package greeter
+import (
+	"github.com/akimsavvin/gonet/v2/di"
+	"github.com/app/config"
+	"github.com/app/rest"
+	"github.com/app/storage"
+	"github.com/app/usecase"
+)
 
-import "fmt"
+func main() {
+	// Initialize a new Gonet container
+	c := di.NewContainer(
+		// Define a typed service
+		// usecase.UserRepo - interface used in the usecase.NewUserService function
+		// storage.NewUserRepo - function creating a service which implements the usecase.UserRepo interface
+		di.WithService[usecase.UserRepo](storage.NewUserRepo),
 
-type UserRepo interface {
-	GetNameByID(id int) string
-}
+		// Define a value-typed service
+		// di.WithFactory just adds the service for the value type,
+		// so it's the same as di.WithService[*config.Config](config.New())
+		di.WithValue(config.New()),
 
-type Greeter struct {
-	repo UserRepo
-}
+		// Define a factory-typed service
+		// usecase.UserRepo - interface defining the repository
+		// di.WithFactory just adds the service for the function return type
+		// so it's the same as di.WithService[*usecase.UserService](usecase.NewUserService)
+		di.WithFactory(usecase.NewUserService),
 
-func NewGreeter(repo UserRepo) *Greeter {
-	return &Greeter{
-		repo: repo,
+		// rest.NewUserController requires *usecase.UserService dependency
+		di.WithService[rest.Controller](rest.NewUserController),
+	)
+
+	// Get all services of type rest.Controller
+	controllers := di.MustGetService[[]rest.Controller](c)
+	for _, contr := range controllers {
+		// Do something with the received services
+		contr.Init(...)
 	}
 }
 
-func (g *Greeter) Greet(id int) {
-	fmt.Printf("Hello, %s!\n", g.repo.GetNameByID(id))
-}
 ```
 
-2. Create a service for the **UserRepo**
-
-```go
-package storage
-
-type UserRepo struct {
-	data map[int]string
-}
-
-func NewUserRepo() *UserRepo {
-	return &UserRepo{
-		data: map[int]string{
-			17: "Akim",
-		},
-	}
-}
-
-func (repo *UserRepo) GetNameByID(id int) string {
-	return repo.data[id]
-}
-```
-
-3. Now you can add your services to the default collection
-
-```go
-package main
-
-import (
-	"github.com/akimsavvin/gonet/di"
-	"myproject/greeter"
-	"myproject/storage"
-)
-
-func main() {
-	di.AddService[greeter.UserRepo](storage.NewUserRepo)
-	di.AddService[*greeter.Greeter](greeter.NewGreeter)
-
-	g := di.GetRequiredService[*greeter.Greeter]()
-	g.Greet(17) // stdout: Hello, Akim!
-}
-```
-
-3. Now you must build the service provider and you can get your service as follows
-
-```go
-package main
-
-import (
-	"github.com/akimsavvin/gonet/di"
-	"greeter"
-	"storage"
-)
-
-func main() {
-	di.AddService[greeter.UserRepo](storage.NewUserRepo)
-	di.AddService[*greeter.Greeter](greeter.New)
-
-	// Build function build the service provider instance (and check the services dependencies if the future),  
-	// which is then used to get services
-	di.Build()
-
-	service := di.GetRequiredService[*greeter.Greeter]()
-	service.Greet(17) // Hello, Akim!
-}
-```
-
-## Environment
-
-GoNet provides the tools to interact with the ENVIRONMENT variable with the **env** package.
-
-### Examples
-
-```go
-package main
-
-import (
-	"fmt"
-	"github.com/akimsavvin/gonet/env"
-	"os"
-)
-
-func main() {
-	os.Setenv("ENVIRONMENT", "Staging")
-
-	curEnv, ok := env.Current()
-	fmt.Println(ok) // true
-	fmt.Println(curEnv == env.Staging) // true
-
-	os.Clearenv()
-
-	curEnv, ok = env.Current()
-	fmt.Println(ok) // false
-	fmt.Println(curEnv == "") // true
-
-	curEnv = env.CurrentOrDefault()
-	fmt.Println(curEnv == env.Development) // true
-	
-	os.Setenv("ENVIRONMENT", "Production")
-
-	curEnv = env.CurrentOrDefault()
-	fmt.Println(curEnv == env.Production) // true
-}
-```
-
-## Graceful shutdown
-
-GoNet provides the tools to deal with graceful shutdown with **graceful** package.
-
-### Example
-
-```go
-package main
-
-import (
-	"app"
-	"context"
-	"fmt"
-	"github.com/akimsavvin/gonet/graceful"
-)
-
-func main() {
-	// ctx will be cancelled on os.Interrupt or os.Kill
-	ctx, cancel := graceful.Context()
-	defer cancel()
-
-	go app.Start(ctx, ...)
-
-	// current goroutine will be blocked and wait until the application is stopped
-	graceful.WaitShutdown()
-}
-```
+This simple container is easy to set up and run. It introduces the core concepts of Gonet: container initialization, dependencies definition, and receiving the services.
