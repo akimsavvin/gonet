@@ -270,24 +270,24 @@ func (c *Container) getService(id serviceIdentifier) (reflect.Value, error) {
 // getServiceKey returns an asserted service instance
 // for the provided type and key
 // from the provided ServiceGetter
-func getServiceKey[T any](sc ServiceGetter, key *string) (T, error) {
+func getServiceKey[T any](sg ServiceGetter, key *string) (T, error) {
 	id := newServiceIdentifier(reflect.TypeFor[T](), key)
-	service, err := sc.getService(id)
+	service, err := sg.getService(id)
 	return service.Interface().(T), err
 }
 
 // GetService returns the asserted service instance for the provided type
 // from the provided ServiceGetter
-func GetService[T any](sc ServiceGetter) (T, error) {
-	return getServiceKey[T](sc, nil)
+func GetService[T any](sg ServiceGetter) (T, error) {
+	return getServiceKey[T](sg, nil)
 }
 
 // MustGetService returns the asserted service instance for the provided type
 // from the provided ServiceGetter.
 //
 // Panics if no service is found or any error occurred while creating the instance
-func MustGetService[T any](sc ServiceGetter) T {
-	service, err := GetService[T](sc)
+func MustGetService[T any](sg ServiceGetter) T {
+	service, err := GetService[T](sg)
 	if err != nil {
 		log.Panicf(
 			"[%v]: could not get the service instance, due to error: %s\n",
@@ -301,16 +301,16 @@ func MustGetService[T any](sc ServiceGetter) T {
 
 // GetKeyedService returns the asserted service instance for the provided type and key
 // from the provided ServiceGetter
-func GetKeyedService[T any](sc ServiceGetter, key string) (T, error) {
-	return getServiceKey[T](sc, &key)
+func GetKeyedService[T any](sg ServiceGetter, key string) (T, error) {
+	return getServiceKey[T](sg, &key)
 }
 
 // MustGetKeyedService returns the asserted service instance for the provided type and key
 // from the provided ServiceGetter.
 //
 // Panics if no service is found or any error occurred while creating the instance
-func MustGetKeyedService[T any](sc ServiceGetter, key string) T {
-	service, err := GetKeyedService[T](sc, key)
+func MustGetKeyedService[T any](sg ServiceGetter, key string) T {
+	service, err := GetKeyedService[T](sg, key)
 	if err != nil {
 		log.Panicf(
 			"[%v:%s]: could not get the service instance, due to error: %s\n",
