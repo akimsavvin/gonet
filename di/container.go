@@ -188,7 +188,7 @@ func NewContainer(opts ...Option) *Container {
 	// Extend options with the default accessors
 	extOpts = append(
 		extOpts,
-		withServiceInstance[*Container](nil, c),
+		withServiceInstance[ServiceGetter](nil, c),
 	)
 
 	for _, opt := range extOpts {
