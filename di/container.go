@@ -128,13 +128,13 @@ func WithKeyedService[T any](key string, factoryOrInstance any) Option {
 	return withServiceKey[T](&key, factoryOrInstance)
 }
 
-// WithValue adds a new value the Container with the provided value
+// WithValue adds a new value to the Container with the provided value
 // Same as the WithService[T](value), but typed
 func WithValue[T any](value T) Option {
 	return withServiceKey[T](nil, value)
 }
 
-// WithKeyedValue adds a new keyed value the Container with the provided value
+// WithKeyedValue adds a new keyed value to the Container with the provided value
 // Same as the WithKeyedService[T](key, value), but typed
 func WithKeyedValue[T any](key string, value T) Option {
 	return withServiceKey[T](&key, value)
@@ -208,7 +208,7 @@ func (c *Container) appendAccessor(id serviceIdentifier, accessor *serviceAccess
 	}
 }
 
-// resolveFactoryDeps returns a slice of service dependencies for the provided factory
+// resolveFactoryDeps returns a slice of service dependency for the provided factory
 func (c *Container) resolveFactoryDeps(factory *serviceFactory) ([]reflect.Value, error) {
 	serviceDeps := make([]reflect.Value, factory.DepsCount)
 
@@ -269,24 +269,25 @@ func (c *Container) getService(id serviceIdentifier) (reflect.Value, error) {
 
 // getServiceKey returns an asserted service instance
 // for the provided type and key
-// from the provided Container instance
-func getServiceKey[T any](c *Container, key *string) (T, error) {
+// from the provided ServiceGetter
+func getServiceKey[T any](sc ServiceGetter, key *string) (T, error) {
 	id := newServiceIdentifier(reflect.TypeFor[T](), key)
-	service, err := c.getService(id)
+	service, err := sc.getService(id)
 	return service.Interface().(T), err
 }
 
 // GetService returns the asserted service instance for the provided type
-// from the provided Container instance
-func GetService[T any](c *Container) (T, error) {
-	return getServiceKey[T](c, nil)
+// from the provided ServiceGetter
+func GetService[T any](sc ServiceGetter) (T, error) {
+	return getServiceKey[T](sc, nil)
 }
 
 // MustGetService returns the asserted service instance for the provided type
-// from the provided Container instance
-// panics if no service found or any error occurred while creating the instance
-func MustGetService[T any](c *Container) T {
-	service, err := GetService[T](c)
+// from the provided ServiceGetter.
+//
+// Panics if no service is found or any error occurred while creating the instance
+func MustGetService[T any](sc ServiceGetter) T {
+	service, err := GetService[T](sc)
 	if err != nil {
 		log.Panicf(
 			"[%v]: could not get the service instance, due to error: %s\n",
@@ -299,16 +300,17 @@ func MustGetService[T any](c *Container) T {
 }
 
 // GetKeyedService returns the asserted service instance for the provided type and key
-// from the provided Container instance
-func GetKeyedService[T any](c *Container, key string) (T, error) {
-	return getServiceKey[T](c, &key)
+// from the provided ServiceGetter
+func GetKeyedService[T any](sc ServiceGetter, key string) (T, error) {
+	return getServiceKey[T](sc, &key)
 }
 
 // MustGetKeyedService returns the asserted service instance for the provided type and key
-// from the provided Container instance
-// panics if no service found or any error occurred while creating the instance
-func MustGetKeyedService[T any](c *Container, key string) T {
-	service, err := GetKeyedService[T](c, key)
+// from the provided ServiceGetter.
+//
+// Panics if no service is found or any error occurred while creating the instance
+func MustGetKeyedService[T any](sc ServiceGetter, key string) T {
+	service, err := GetKeyedService[T](sc, key)
 	if err != nil {
 		log.Panicf(
 			"[%v:%s]: could not get the service instance, due to error: %s\n",
