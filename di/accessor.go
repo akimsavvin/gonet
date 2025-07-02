@@ -77,7 +77,7 @@ func (accessor *serviceAccessor) Instance() (reflect.Value, error) {
 	return *accessor.instance, accessor.err
 }
 
-// serviceAccessorsList is a singly-linked list of service accessors
+// serviceAccessorsList is a singly linked list of service accessors
 type serviceAccessorsList struct {
 	// internal is the list.List instance
 	internal *list.List

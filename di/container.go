@@ -286,10 +286,13 @@ func GetService[T any](c *Container) (T, error) {
 // from the provided Container instance
 // panics if no service found or any error occurred while creating the instance
 func MustGetService[T any](c *Container) T {
-	id := newServiceIdentifier(reflect.TypeFor[T](), nil)
 	service, err := GetService[T](c)
 	if err != nil {
-		log.Panicf("[%v]: could not get the service instance, due to error: %s\n", id.Type, err.Error())
+		log.Panicf(
+			"[%v]: could not get the service instance, due to error: %s\n",
+			reflect.TypeFor[T](),
+			err.Error(),
+		)
 	}
 
 	return service
@@ -305,10 +308,14 @@ func GetKeyedService[T any](c *Container, key string) (T, error) {
 // from the provided Container instance
 // panics if no service found or any error occurred while creating the instance
 func MustGetKeyedService[T any](c *Container, key string) T {
-	id := newServiceIdentifier(reflect.TypeFor[T](), &key)
 	service, err := GetKeyedService[T](c, key)
 	if err != nil {
-		log.Panicf("[%v:%s]: could not get the service instance, due to error: %s\n", id.Type, key, err.Error())
+		log.Panicf(
+			"[%v:%s]: could not get the service instance, due to error: %s\n",
+			reflect.TypeFor[T](),
+			key,
+			err.Error(),
+		)
 	}
 
 	return service
