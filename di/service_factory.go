@@ -11,13 +11,13 @@ import (
 
 // serviceFactory is a service factory function description
 type serviceFactory struct {
-	// Type is factory type
+	// Type is a factory type
 	Type reflect.Type
 
 	// Value is factory value
 	Value reflect.Value
 
-	// DepsCount is number of the factory dependencies
+	// DepsCount is a number of the factory dependencies
 	DepsCount int
 
 	// ReturnType is the return type of the factory function
