@@ -1,5 +1,5 @@
 <p>
-  <em><b>Gonet</b> is a <a href="https://dotnet.microsoft.com">.NET</a> inspired <b>DI framework</b>. Designed to <b>ease</b> things up for <b>fast</b> development with <a href="https://docs.gofiber.io/#zero-allocation"><b>zero memory allocation</b></a> and <b>performance</b> in mind.</em>
+  <em><b>Gonet<b> is a <a href="https://dotnet.microsoft.com">.NET</a>-inspired DI framework for Go, aimed at delivering a modern, generic-based developer experience consistent with other platforms.
 </p>
 
 ## ⚙️ Installation
