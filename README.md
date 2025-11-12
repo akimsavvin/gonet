@@ -1,5 +1,5 @@
 <p>
-  <em><b>Gonet<b> is a <a href="https://dotnet.microsoft.com">.NET</a>-inspired DI framework for Go, aimed at delivering a modern, generic-based developer experience consistent with other platforms.
+  <b>Gonet<b> is a <a href="https://dotnet.microsoft.com">.NET</a>-inspired DI framework for Go, aimed at delivering a modern, generic-based developer experience consistent with other platforms.
 </p>
 
 ## ⚙️ Installation
