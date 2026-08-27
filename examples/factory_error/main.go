@@ -13,7 +13,7 @@ func main() {
 		di.WithFactory(NewUserService),
 	)
 
-	service, err := di.GetService[*UserService](c)
+	service, err := c.GetService[*UserService]()
 	var dependencyError *di.DependencyError
 	if err != nil && errors.As(err, &dependencyError) {
 		fmt.Println(

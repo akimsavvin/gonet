@@ -6,10 +6,11 @@ package di
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/suite"
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/suite"
 )
 
 // WithServiceSuite is the suite for testing the WithService function
@@ -287,7 +288,7 @@ func (suite *GetServiceSuite) TestFactory() {
 	c := NewContainer(WithFactory(f))
 
 	// Act
-	res, err := GetService[string](c)
+	res, err := c.GetService[string]()
 
 	// Assert
 	suite.Equal(inst, res)
@@ -303,7 +304,7 @@ func (suite *GetServiceSuite) TestFactoryError() {
 	c := NewContainer(WithFactory(f))
 
 	// Act
-	res, err := GetService[string](c)
+	res, err := c.GetService[string]()
 
 	// Assert
 	suite.Empty(res)
@@ -317,7 +318,7 @@ func (suite *GetServiceSuite) TestInstance() {
 	c := NewContainer(WithValue(inst))
 
 	// Act
-	res, err := GetService[string](c)
+	res, err := c.GetService[string]()
 
 	// Assert
 	suite.Equal(inst, res)
@@ -345,7 +346,7 @@ func (suite *GetKeyedServiceSuite) TestFactory() {
 	c := NewContainer(WithKeyedFactory(key, f))
 
 	// Act
-	res, err := GetKeyedService[string](c, key)
+	res, err := c.GetKeyedService[string](key)
 
 	// Assert
 	suite.Equal(inst, res)
@@ -362,7 +363,7 @@ func (suite *GetKeyedServiceSuite) TestFactoryError() {
 	c := NewContainer(WithKeyedFactory(key, f))
 
 	// Act
-	res, err := GetKeyedService[string](c, key)
+	res, err := c.GetKeyedService[string](key)
 
 	// Assert
 	suite.Empty(res)
@@ -377,7 +378,7 @@ func (suite *GetKeyedServiceSuite) TestInstance() {
 	c := NewContainer(WithKeyedValue(key, inst))
 
 	// Act
-	res, err := GetKeyedService[string](c, key)
+	res, err := c.GetKeyedService[string](key)
 
 	// Assert
 	suite.Equal(inst, res)
@@ -406,7 +407,7 @@ func (suite *MustGetServiceSuite) TestFactory() {
 	// Act & Assert
 	var res string
 	suite.NotPanics(func() {
-		res = MustGetService[string](c)
+		res = c.MustGetService[string]()
 	})
 	suite.Equal(inst, res)
 }
@@ -421,7 +422,7 @@ func (suite *MustGetServiceSuite) TestFactoryError() {
 
 	// Act & Assert
 	suite.Panics(func() {
-		MustGetService[string](c)
+		c.MustGetService[string]()
 	})
 }
 
@@ -434,7 +435,7 @@ func (suite *MustGetServiceSuite) TestInstance() {
 	// Act & Assert
 	var res string
 	suite.NotPanics(func() {
-		res = MustGetService[string](c)
+		res = c.MustGetService[string]()
 	})
 	suite.Equal(inst, res)
 }
@@ -462,7 +463,7 @@ func (suite *MustGetKeyedServiceSuite) TestFactory() {
 	// Act & Assert
 	var res string
 	suite.NotPanics(func() {
-		res = MustGetKeyedService[string](c, key)
+		res = c.MustGetKeyedService[string](key)
 	})
 	suite.Equal(inst, res)
 }
@@ -478,7 +479,7 @@ func (suite *MustGetKeyedServiceSuite) TestFactoryError() {
 
 	// Act & Assert
 	suite.Panics(func() {
-		MustGetKeyedService[string](c, key)
+		c.MustGetKeyedService[string](key)
 	})
 }
 
@@ -492,7 +493,7 @@ func (suite *MustGetKeyedServiceSuite) TestInstance() {
 	// Act & Assert
 	var res string
 	suite.NotPanics(func() {
-		res = MustGetKeyedService[string](c, key)
+		res = c.MustGetKeyedService[string](key)
 	})
 	suite.Equal(inst, res)
 }

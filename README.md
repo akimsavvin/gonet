@@ -4,7 +4,7 @@
 
 ## ⚙️ Installation
 
-Gonet requires **Go version `1.23` or higher** to run. If you need to install or upgrade Go, visit the [official Go download page](https://go.dev/dl/). To start setting up your project, create a new directory for your project and navigate into it. Then, initialize your project with Go modules by executing the following command in your terminal:
+Gonet requires **Go version `1.27` or higher** to run. If you need to install or upgrade Go, visit the [official Go download page](https://go.dev/dl/). To start setting up your project, create a new directory for your project and navigate into it. Then, initialize your project with Go modules by executing the following command in your terminal:
 
 ```bash
 go mod init github.com/you/repo
@@ -59,7 +59,7 @@ func main() {
 	)
 
 	// Get all services of type rest.Controller
-	controllers := di.MustGetService[[]rest.Controller](c)
+	controllers := c.MustGetService[[]rest.Controller]()
 	for _, contr := range controllers {
 		// Do something with the received services
 		contr.Init(...)

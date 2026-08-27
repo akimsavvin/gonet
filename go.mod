@@ -4,7 +4,7 @@
 
 module github.com/akimsavvin/gonet/v2
 
-go 1.23.0
+go 1.27.0
 
 require (
 	github.com/brianvoe/gofakeit/v7 v7.2.1

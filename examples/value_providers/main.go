@@ -21,7 +21,7 @@ func main() {
 		di.WithFactory(NewUserService),
 	)
 
-	service := di.MustGetService[*UserService](c)
+	service := c.MustGetService[*UserService]()
 
 	fmt.Println("\n=== Creating user ===")
 	userID := service.CreateUser("Akim")

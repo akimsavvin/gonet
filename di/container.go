@@ -186,10 +186,7 @@ func NewContainer(opts ...Option) *Container {
 	copy(extOpts, opts)
 
 	// Extend options with the default accessors
-	extOpts = append(
-		extOpts,
-		withServiceInstance[ServiceGetter](nil, c),
-	)
+	extOpts = append(extOpts, WithValue(c))
 
 	for _, opt := range extOpts {
 		opt.apply(c)
@@ -269,25 +266,22 @@ func (c *Container) getService(id serviceIdentifier) (reflect.Value, error) {
 
 // getServiceKey returns an asserted service instance
 // for the provided type and key
-// from the provided ServiceGetter
-func getServiceKey[T any](sg ServiceGetter, key *string) (T, error) {
+func (c *Container) getServiceKey[T any](key *string) (T, error) {
 	id := newServiceIdentifier(reflect.TypeFor[T](), key)
-	service, err := sg.getService(id)
+	service, err := c.getService(id)
 	return service.Interface().(T), err
 }
 
 // GetService returns the asserted service instance for the provided type
-// from the provided ServiceGetter
-func GetService[T any](sg ServiceGetter) (T, error) {
-	return getServiceKey[T](sg, nil)
+func (c *Container) GetService[T any]() (T, error) {
+	return c.getServiceKey[T](nil)
 }
 
 // MustGetService returns the asserted service instance for the provided type
-// from the provided ServiceGetter.
 //
 // Panics if no service is found or any error occurred while creating the instance
-func MustGetService[T any](sg ServiceGetter) T {
-	service, err := GetService[T](sg)
+func (c *Container) MustGetService[T any]() T {
+	service, err := c.GetService[T]()
 	if err != nil {
 		log.Panicf(
 			"[%v]: could not get the service instance, due to error: %s\n",
@@ -300,17 +294,15 @@ func MustGetService[T any](sg ServiceGetter) T {
 }
 
 // GetKeyedService returns the asserted service instance for the provided type and key
-// from the provided ServiceGetter
-func GetKeyedService[T any](sg ServiceGetter, key string) (T, error) {
-	return getServiceKey[T](sg, &key)
+func (c *Container) GetKeyedService[T any](key string) (T, error) {
+	return c.getServiceKey[T](&key)
 }
 
 // MustGetKeyedService returns the asserted service instance for the provided type and key
-// from the provided ServiceGetter.
 //
 // Panics if no service is found or any error occurred while creating the instance
-func MustGetKeyedService[T any](sg ServiceGetter, key string) T {
-	service, err := GetKeyedService[T](sg, key)
+func (c *Container) MustGetKeyedService[T any](key string) T {
+	service, err := c.GetKeyedService[T](key)
 	if err != nil {
 		log.Panicf(
 			"[%v:%s]: could not get the service instance, due to error: %s\n",

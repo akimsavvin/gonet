@@ -13,7 +13,7 @@ func main() {
 		di.WithFactory(NewUserService),
 	)
 
-	service := di.MustGetService[*UserService](c)
+	service := c.MustGetService[*UserService]()
 
 	userID := service.CreateUser("Akim")
 	user := service.GetUser(userID)
