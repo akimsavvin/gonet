@@ -28,6 +28,8 @@ Getting started with Gonet is easy. Here's a basic example to create a simple di
 package main
 
 import (
+	"log"
+
 	"github.com/akimsavvin/gonet/v2/di"
 	"github.com/app/config"
 	"github.com/app/rest"
@@ -37,7 +39,9 @@ import (
 
 func main() {
 	// Initialize a new Gonet container
-	c := di.NewContainer(
+	// The container verifies its dependency graph, so a missing dependency or a
+	// dependency cycle is returned here instead of failing later on resolution
+	c, err := di.NewContainer(
 		// Define a typed service
 		// usecase.UserRepo - interface used in the usecase.NewUserService function
 		// storage.NewUserRepo - function creating a service which implements the usecase.UserRepo interface
@@ -57,6 +61,9 @@ func main() {
 		// rest.NewUserController requires *usecase.UserService dependency
 		di.WithService[rest.Controller](rest.NewUserController),
 	)
+	if err != nil {
+		log.Fatalf("could not create the container: %s", err)
+	}
 
 	// Get all services of type rest.Controller
 	controllers := c.MustGetService[[]rest.Controller]()

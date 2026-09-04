@@ -2,16 +2,20 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/akimsavvin/gonet/v2/di"
 )
 
 func main() {
-	c := di.NewContainer(
+	c, err := di.NewContainer(
 		di.WithService[UserRepository](NewUserRepositoryImpl),
 		di.WithFactory(NewUserService),
 	)
+	if err != nil {
+		log.Fatalf("could not create the container: %s", err)
+	}
 
 	service := c.MustGetService[*UserService]()
 

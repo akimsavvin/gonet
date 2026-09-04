@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 
 	"github.com/akimsavvin/gonet/v2/di"
@@ -12,7 +13,7 @@ func main() {
 	cacheRepo := NewCacheRepositoryImpl()
 	dbRepo := NewDBRepositoryImpl()
 
-	c := di.NewContainer(
+	c, err := di.NewContainer(
 		// Register first repository with WithService passing the instance
 		di.WithService[UserRepository](cacheRepo),
 		// Register second repository with WithValue, the only difference is that it is type-safe
@@ -20,6 +21,9 @@ func main() {
 		// Factory automatically receives []UserRepository with all registered implementations
 		di.WithFactory(NewUserService),
 	)
+	if err != nil {
+		log.Fatalf("could not create the container: %s", err)
+	}
 
 	service := c.MustGetService[*UserService]()
 

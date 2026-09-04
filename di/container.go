@@ -175,8 +175,11 @@ type Container struct {
 	accessors serviceAccessors
 }
 
-// NewContainer creates a new Container
-func NewContainer(opts ...Option) *Container {
+// newContainer creates a new Container with the provided options applied.
+//
+// The registration graph is not verified, so the returned Container may be
+// structurally broken. NewContainer is the verified entry point
+func newContainer(opts ...Option) *Container {
 	c := &Container{
 		accessors: make(serviceAccessors),
 	}
@@ -195,6 +198,24 @@ func NewContainer(opts ...Option) *Container {
 	return c
 }
 
+// NewContainer creates a new Container with the provided options and verifies
+// its registration graph.
+//
+// Verification runs once every option is applied, and reports every missing
+// dependency and every dependency cycle it finds as a *VerificationError. It
+// calls no factory and creates no service instance, so services are still
+// created lazily on first resolution.
+//
+// Returns a nil Container if the verification fails.
+func NewContainer(opts ...Option) (*Container, error) {
+	c := newContainer(opts...)
+	if err := c.verify(); err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
 // appendAccessor appends a service accessor to the container to the provided id
 // creates a new serviceAccessorsList if the id does not exist
 func (c *Container) appendAccessor(id serviceIdentifier, accessor *serviceAccessor) {
@@ -211,9 +232,7 @@ func (c *Container) resolveFactoryDeps(factory *serviceFactory) ([]reflect.Value
 
 	for i := 0; i < factory.DepsCount; i++ {
 		depType := factory.Type.In(i)
-		depID := serviceIdentifier{
-			Type: depType,
-		}
+		depID := newDependencyIdentifier(depType)
 
 		dep, err := c.getService(depID)
 		if err != nil {
@@ -232,10 +251,7 @@ func (c *Container) resolveFactoryDeps(factory *serviceFactory) ([]reflect.Value
 
 // getService gets a service instance for the provided service identifier
 func (c *Container) getService(id serviceIdentifier) (reflect.Value, error) {
-	isSlice := id.Type.Kind() == reflect.Slice
-	if isSlice {
-		id.Type = id.Type.Elem()
-	}
+	id, isSlice := id.resolveLookup()
 
 	accessors, ok := c.accessors[id]
 	if !ok {

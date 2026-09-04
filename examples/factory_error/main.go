@@ -3,15 +3,19 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/akimsavvin/gonet/v2/di"
 )
 
 func main() {
-	c := di.NewContainer(
+	c, err := di.NewContainer(
 		di.WithService[UserRepository](NewUserRepositoryImpl),
 		di.WithFactory(NewUserService),
 	)
+	if err != nil {
+		log.Fatalf("could not create the container: %s", err)
+	}
 
 	service, err := c.GetService[*UserService]()
 	var dependencyError *di.DependencyError
